@@ -1,0 +1,4 @@
+To run set 
+
+GOPATH=$GOPATH:`pwd`
+
