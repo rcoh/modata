@@ -40,6 +40,7 @@ func StartReplicationServer(name string) *ReplicationServer{
             rs.WhoHasNode(c, node)
         })
 
+        fmt.Printf("Listening on %v\n", name)
         rs.server.Run(name)
     }();
 
