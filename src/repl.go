@@ -1,55 +1,46 @@
 package modata
 
 import (
-    "goweb"
     "fmt"
     "sync"
+    "web"
 )
 
 type ReplicationServer struct {
     mu sync.Mutex
-    port string
-}
-
-func (rs *ReplicationServer) Replicate(node int) {
-    fmt.Println("Replicating!")
-}
-
-func (rs *ReplicationServer) HelloController (c *goweb.Context) {
-    fmt.Fprintf(c.ResponseWriter, "Hello there %s\n", c.PathParams["name"])
-}
-
-type KeyOwner struct {
-    Key string
-    Node string
+    name string
+    identifier string
+    server *web.Server
 }
 
 // Requests to know the node
-func (rs *ReplicationServer) WhoHasNode (c *goweb.Context) {
-    key := c.PathParams["key"]
-    c.RespondWithData(KeyOwner{key, "none"})
+func (rs *ReplicationServer) WhoHasNode (c *web.Context, node string) {
+    c.WriteString("Don't know who owns " + node)
 }
 
-func (rs *ReplicationServer) AddNode (c *goweb.Context) {
-    node := c.PathParams["node"]
-    fmt.Println(node)
-    c.RespondWithOK()
+func (rs *ReplicationServer) Identifier (c *web.Context) {
+    c.WriteString(rs.identifier)
 }
 
-func StartReplicationServer(port string) *ReplicationServer{
+func StartReplicationServer(name string) *ReplicationServer{
     rs := new(ReplicationServer)
 
-    rs.port = port
+    // Node identifier for chord
+    rs.identifier = MakeGUID()
+    rs.name = name
+
+    rs.server = web.NewServer()
 
     go func() {
-        goweb.ConfigureDefaultFormatters()
-        goweb.MapFunc("/hello/{name}", func(c * goweb.Context) {
-            rs.HelloController(c)
+        // Identifier for this node
+        rs.server.Get("/id", func (c *web.Context) {
+            rs.Identifier(c)
         })
-        goweb.MapFunc("/whohas/{key}", func(c *goweb.Context) {
-            rs.WhoHasNode(c)
+        rs.server.Get("/whohas/(.*)", func (c *web.Context, node string) {
+            rs.WhoHasNode(c, node)
         })
-        goweb.ListenAndServe(port)
+
+        rs.server.Run(name)
     }();
 
     return rs

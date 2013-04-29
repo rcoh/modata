@@ -11,8 +11,10 @@ func TestSetup(t *testing.T) {
 
 func TestReplication(t *testing.T) {
     fmt.Println("Test: Initialization of replication service is correct")
-    rs := StartReplicationServer(":8080")
+    rs := StartReplicationServer("localhost:8080")
+    rs2 := StartReplicationServer("localhost:8081")
     fmt.Println(rs)
-    time.Sleep(10 * time.Second)
+    fmt.Println(rs2)
+    time.Sleep(100 * time.Second)
     fmt.Printf("... Pass \n")
 }
