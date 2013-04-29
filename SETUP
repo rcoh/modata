@@ -1,4 +1,2 @@
-To run set 
-
-GOPATH=$GOPATH:`pwd`
+export GOPATH=$GOPATH:`pwd`
 

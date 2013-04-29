@@ -9,6 +9,12 @@ func TestSetup(t *testing.T) {
 
 }
 
+func TestBlock(t *testing.T) {
+    fmt.Println("Test: Initialization of block service is correct")
+    bs := StartBlockServer("localhost:1234")
+    fmt.Println(bs)
+}
+
 func TestReplication(t *testing.T) {
     fmt.Println("Test: Initialization of replication service is correct")
     rs := StartReplicationServer("localhost:8080")
