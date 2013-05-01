@@ -6,7 +6,6 @@ import sys
 
 parser = argparse.ArgumentParser(description='modataclient')
 parser.add_argument('--keyfile', dest='keyfile')
-parser.add_argument('--repl', default=False, type=bool, dest='repl')
 parser.add_argument('--upload', dest='upload')
 parser.add_argument('--download', dest='download')
 
@@ -35,11 +34,3 @@ if args.download:
     data = coding.get_chunks(file_metadata)
     print data
 
-
-
-if args.repl:
-    while 1:
-        try:
-            command = raw_input(">")
-        except EOFError:
-            break
