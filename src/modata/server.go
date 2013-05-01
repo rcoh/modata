@@ -15,11 +15,11 @@ type BlockServer struct {
 }
 
 // Requests to know the node
-func (rs *BlockServer) WhoHasNode (c *web.Context, node string) {
+func (bs *BlockServer) WhoHasNode (c *web.Context, node string) {
     c.WriteString("Don't know who owns " + node)
 }
 
-func (rs *BlockServer) Store (c *web.Context) string {
+func (bs *BlockServer) Store (c *web.Context) string {
     key, exists := c.Params["key"]
     file, _ := c.Params["data"]
     // Should verify the key is the hash of the data
@@ -29,7 +29,7 @@ func (rs *BlockServer) Store (c *web.Context) string {
 
     if exists {
         hashedKey := MakeKey(Hash(key))
-        rs.data[hashedKey] = file
+        bs.data[hashedKey] = file
         return RespondWithData(KeyValue(key, file))
     } else {
         return RespondWithStatus("FAIL", "NO KEY")
@@ -37,9 +37,9 @@ func (rs *BlockServer) Store (c *web.Context) string {
     return RespondNotOk()
 }
 
-func (rs *BlockServer) FindValue(c *web.Context, key string) string {
+func (bs *BlockServer) FindValue(c *web.Context, key string) string {
     hashedKey := MakeKey(Hash(key))
-    value, ok := rs.data[hashedKey]
+    value, ok := bs.data[hashedKey]
     if ok {
         return RespondWithData(value)
     }
@@ -50,46 +50,46 @@ func VerifyKV(key string, value string) bool {
     return MakeHex(Hash(value)) == key
 }
 
-func (rs *BlockServer) FindNode(c *web.Context, node string) string {
+func (bs *BlockServer) FindNode(c *web.Context, node string) string {
     return RespondOk()
 }
 
 func StartBlockServer(name string) *BlockServer{
-    rs := new(BlockServer)
+    bs := new(BlockServer)
 
     // Node identifier for chord
-    rs.identifier = MakeHex(MakeGUID())
-    rs.name = name
-    rs.data = make(map[Key]string)
-    rs.server = web.NewServer()
+    bs.identifier = MakeHex(MakeGUID())
+    bs.name = name
+    bs.data = make(map[Key]string)
+    bs.server = web.NewServer()
 
     go func() {
         // Identifier for this node
-        rs.server.Post("/store", func (c *web.Context) string {
+        bs.server.Post("/store", func (c *web.Context) string {
             c.ContentType("json")
-            return rs.Store(c)
+            return bs.Store(c)
         })
-        rs.server.Get("/find-value/(.*)", func (c *web.Context, key string) string {
+        bs.server.Get("/find-value/(.*)", func (c *web.Context, key string) string {
             c.ContentType("json")
-            return rs.FindValue(c, key)
+            return bs.FindValue(c, key)
         })
-        rs.server.Get("/find-node/(.*)", func (c *web.Context, node string) string {
+        bs.server.Get("/find-node/(.*)", func (c *web.Context, node string) string {
             c.ContentType("json")
-            return rs.FindNode(c, node)
+            return bs.FindNode(c, node)
         })
 
-        rs.server.Get("/ping", func (c *web.Context) string {
+        bs.server.Get("/ping", func (c *web.Context) string {
             c.ContentType("json")
             response := fmt.Sprintf("Ping from %v acknowledged by %v\n",
-                                     c.Request.RemoteAddr, rs.name)
+                                     c.Request.RemoteAddr, bs.name)
             return RespondWithData(response)
         })
 
         fmt.Printf("Listening on %v\n", name)
-        rs.server.Run(name)
+        bs.server.Run(name)
     }();
 
-    return rs
+    return bs
 }
 
 
