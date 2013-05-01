@@ -26,7 +26,7 @@ func StartReplicationServer(name string) *ReplicationServer{
     rs := new(ReplicationServer)
 
     // Node identifier for chord
-    rs.identifier = MakeGUID()
+    rs.identifier = MakeHex(MakeGUID())
     rs.name = name
 
     rs.server = web.NewServer()
