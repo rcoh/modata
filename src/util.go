@@ -77,12 +77,3 @@ func Hash(value string) []byte {
 	return hasher.Sum(nil)
 }
 
-func XOR(left []byte, right []byte) []byte {
-    barray := make([]byte, len(left))
-    for i := range barray {
-        barray[i] = left[i] ^ right[i]
-    }
-    return barray
-}
-
-
