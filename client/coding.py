@@ -50,7 +50,8 @@ def send_chunks_to_storage(chunks):
     for chunk_dict in chunks:
         digest = chunk_dict['digest']
         chunk = chunk_dict['data']
-        resp = requests.post(SERVER + "upload", data={'key': digest, 'data': chunk}).json()
+        resp_obj = requests.post(SERVER + "store", data={'key': digest, 'data': chunk})
+        resp = resp_obj.json
         if resp['status'] != 'OK':
             print resp
 
@@ -68,7 +69,7 @@ def get_chunks(metadata):
     m = metadata['m']
     # TODO: we only need k
     for chunk_dict in metadata['chunks']:
-        resp = requests.get(SERVER + "get/" + chunk_dict['digest']).json()
+        resp = requests.get(SERVER + "find-value/" + chunk_dict['digest']).json
         if resp['status'] == 'OK':
             chunk_dict['data'] = resp['data']
 
