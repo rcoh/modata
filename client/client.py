@@ -9,7 +9,8 @@ filename = args.file
 
 with open(filename, 'r') as f:
     data = f.read()
-    chunks = list(lib.erasure_chunk(data))
-    lib.send_chunks_to_storage(chunks)
-    access_info = lib.send_chunks_to_meta(chunks)
+    chunks_digests = lib.make_digests(lib.erasure_chunk(data))
+
+    lib.send_chunks_to_storage(chunks_digests)
+    access_info = lib.send_chunks_to_meta(chunks_digests)
 

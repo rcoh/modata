@@ -20,12 +20,21 @@ func (rs *BlockServer) WhoHasNode (c *web.Context, node string) {
 
 func (rs *BlockServer) upload (c *web.Context) {
     key, exists := c.Params["key"]
-    file, _ := c.Params["file"]
+    file, _ := c.Params["data"]
     if exists {
         c.WriteString(key)
     } else {
         c.WriteString("NO KEY")
     }
+    fmt.Println("VERIFY: ", verifyKV(key, file))
+}
+
+func (rs *BlockServer) get(c *web.Context, key string) {
+    c.WriteString("Looks like you wanted: " + key)
+}
+
+func verifyKV(key string, value string) bool {
+    return Hash(value) == key
 }
 
 func StartBlockServer(name string) *BlockServer{
@@ -42,8 +51,8 @@ func StartBlockServer(name string) *BlockServer{
         rs.server.Post("/upload", func (c *web.Context) {
             rs.upload(c)
         })
-        rs.server.Get("/whohas/(.*)", func (c *web.Context, node string) {
-            rs.WhoHasNode(c, node)
+        rs.server.Get("/get/(.*)", func (c *web.Context, node string) {
+            rs.get(c, node)
         })
 
         fmt.Printf("Listening on %v\n", name)
