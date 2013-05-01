@@ -34,6 +34,9 @@ def recombine_chunks(k, m, chunks):
     # Pick k chunks:
     used_data = []
     used_blocknums = []
+    if len(chunks) < k:
+        print "Not enough chunks to recover data"
+        return ""
     for chunk in chunks:
         used_data.append(chunk['data'])
         used_blocknums.append(chunk['blocknum'])
