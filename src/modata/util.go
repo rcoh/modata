@@ -8,6 +8,9 @@ import (
     "time"
     "encoding/json"
     "fmt"
+    "net/http"
+    "net/url"
+    "io/ioutil"
 )
 
 // REST convenience to marshall all the things to json
@@ -36,6 +39,54 @@ func RespondNotOk() string {
     return RespondWithStatus(NOTOK, nil)
 }
 
+
+// REST convenience to unmarshall all the things from json
+func JsonGet(uri string) (string, interface{}) {
+    // Make the http request
+    resp, err := http.Get(uri)
+    if (err != nil) { return ERROR, err }
+
+    // Decode the body of the response into a []byte
+    response := make(map[string]interface{})
+    raw, err := ioutil.ReadAll(resp.Body)
+    if (err != nil) { return ERROR, err }
+
+    // Decode the []byte into the standard mapping
+    err = json.Unmarshal(raw, &response)
+    if (err != nil) { return ERROR, err }
+
+    // Return the values TODO: check for existence of correct keys
+    return response["status"].(string), response["data"]
+}
+
+func JsonPost(uri string, data map[string]string) (string, interface{}) {
+    // Make the http post request
+    values := make(url.Values)
+    for k,v := range data {
+        values.Set(k, v)
+    }
+    resp, err := http.PostForm(uri, values)
+    if (err != nil) { return ERROR, err }
+
+    // Decode the body of the response into a []byte
+    response := make(map[string]interface{})
+    raw, err := ioutil.ReadAll(resp.Body)
+    if (err != nil) { return ERROR, err }
+
+    // Decode the []byte into the standard mapping
+    err = json.Unmarshal(raw, &response)
+    if (err != nil) { return ERROR, err }
+
+    // Return the values TODO: check for existence of correct keys
+    return response["status"].(string), response["data"]
+}
+
+func JsonPostUrl(uri string) (string, interface{}) {
+    blank := make(map[string]string)
+    return JsonPost(uri, blank)
+}
+
+// Done with REST convenience methods
 
 // String -> []Byte and visaversa
 func MakeHex(barray []byte) string {

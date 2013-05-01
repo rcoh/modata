@@ -15,5 +15,6 @@ const (
     OK = "OK"
     NOTFOUND = "NOTFOUND"
     NOTOK = "NOTOK"
+    ERROR = "ERROR"
 )
 
