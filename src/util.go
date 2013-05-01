@@ -39,6 +39,17 @@ func MakeHex(barray []byte) string {
     return hex.EncodeToString(barray)
 }
 
+func MakeByteArray(str string) []byte {
+    data, _ := hex.DecodeString(str)
+    return data
+}
+
+func KeyValue(key string, value string) map[string]string {
+    response := make(map[string]string)
+    response[key] = value
+    return response
+}
+
 func MakeGUID() []byte {
 	// UID generation, basically simplified UUID rfc spec
 	hasher := sha1.New()

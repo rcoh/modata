@@ -11,6 +11,7 @@ type BlockServer struct {
     name string
     identifier string
     server *web.Server
+    data map[string]string
 }
 
 // Requests to know the node
@@ -21,9 +22,12 @@ func (rs *BlockServer) WhoHasNode (c *web.Context, node string) {
 func (rs *BlockServer) Store (c *web.Context) string {
     key, exists := c.Params["key"]
     file, _ := c.Params["data"]
-    fmt.Println("Verify: ", VerifyKV(key, file))
+    // Should verify the key is the hash of the data
+    //fmt.Println("Verify: ", VerifyKV(key, file))
+
     if exists {
-        return RespondWithData(key)
+        rs.data[key] = file
+        return RespondWithData(KeyValue(key, file))
     } else {
         return RespondWithStatus("FAIL", "NO KEY")
     }
@@ -31,7 +35,11 @@ func (rs *BlockServer) Store (c *web.Context) string {
 }
 
 func (rs *BlockServer) FindValue(c *web.Context, key string) string {
-    return RespondWithData("Looks like you wanted: " + key)
+    value, ok := rs.data[key]
+    if ok {
+        return RespondWithData(value)
+    }
+    return RespondWithData("Look elsewhere for" + key)
 }
 
 func VerifyKV(key string, value string) bool {
@@ -48,7 +56,7 @@ func StartBlockServer(name string) *BlockServer{
     // Node identifier for chord
     rs.identifier = MakeHex(MakeGUID())
     rs.name = name
-
+    rs.data = make(map[string]string)
     rs.server = web.NewServer()
 
     go func() {
