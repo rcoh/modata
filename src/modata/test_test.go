@@ -111,7 +111,7 @@ func TestShortlist(t *testing.T) {
 
     fmt.Printf("%v\n", rt.buckets[1].Front().Value);
 
-    fmt.Printf("%v\n", rt.SelectShortlist(k, 2))
+    fmt.Printf("%v\n", rt.FindClosest(k, 2))
 
     fmt.Println("... Pass")
 }
