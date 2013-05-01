@@ -8,7 +8,11 @@ import (
     "time"
 )
 
-func MakeGUID() string {
+func MakeHex(barray []byte) string {
+    return hex.EncodeToString(barray)
+}
+
+func MakeGUID() []byte {
 	// UID generation, basically simplified UUID rfc spec
 	hasher := sha1.New()
 
@@ -21,10 +25,10 @@ func MakeGUID() string {
     // Hash the result. This should result in something that is entirely unique
     // unless we get a hash collision or two random numbers are generated the
     // same at the same exact time
-	return hex.EncodeToString(hasher.Sum(nil))
+	return hasher.Sum(nil)
 }
 
-func Hash(value string) string {
+func Hash(value string) []byte {
     // Generate hash of the provided string
 	hasher := sha1.New()
 
@@ -32,7 +36,15 @@ func Hash(value string) string {
 	hasher.Write([]byte(value))
 
     // Hash the result.
-	return hex.EncodeToString(hasher.Sum(nil))
+	return hasher.Sum(nil)
+}
+
+func XOR(left []byte, right []byte) []byte {
+    barray := make([]byte, len(left))
+    for i := range barray {
+        barray[i] = left[i] ^ right[i]
+    }
+    return barray
 }
 
 

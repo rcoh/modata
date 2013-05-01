@@ -34,14 +34,14 @@ func (rs *BlockServer) get(c *web.Context, key string) {
 }
 
 func verifyKV(key string, value string) bool {
-    return Hash(value) == key
+    return MakeHex(Hash(value)) == key
 }
 
 func StartBlockServer(name string) *BlockServer{
     rs := new(BlockServer)
 
     // Node identifier for chord
-    rs.identifier = MakeGUID()
+    rs.identifier = MakeHex(MakeGUID())
     rs.name = name
 
     rs.server = web.NewServer()
