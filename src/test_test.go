@@ -16,17 +16,18 @@ func TestBlock(t *testing.T) {
     time.Sleep(100 * time.Second)
 }
 
-func TestReplication(t *testing.T) {
+func xTestReplication(t *testing.T) {
     fmt.Println("Test: Initialization of replication service is correct")
     rs := StartReplicationServer("localhost:8080")
     rs2 := StartReplicationServer("localhost:8081")
     fmt.Println(rs)
     fmt.Println(rs2)
     time.Sleep(100 * time.Second)
-    fmt.Printf("... Pass \n")
+    fmt.Println("... Pass")
 }
 
 func TestDistance(t *testing.T) {
+    fmt.Println("Test: Distance function between Nodes")
     a := NodeID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
     b := NodeID{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 
@@ -35,14 +36,17 @@ func TestDistance(t *testing.T) {
     if Distance(&a, &b) != c {
         t.Errorf("XOR: %v\n", Distance(&a, &b))
     }
+    fmt.Println("... Pass")
 }
 
 func TestBucketing(t *testing.T) {
+    fmt.Println("Test: Bucketing")
     a := NodeID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
     b := NodeID{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
     rt := RoutingTable{}
     rt.me = a
     fmt.Printf("Bucket %d\n", rt.BucketForNode(b))
+    fmt.Println("... Pass")
 }
 
 func ExampleUpdate() {
@@ -68,6 +72,8 @@ func ExampleUpdate() {
 }
 
 func TestShortlist(t *testing.T) {
+    fmt.Println("Test: Shortlist")
+
     a := NodeID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
     k := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
@@ -87,4 +93,5 @@ func TestShortlist(t *testing.T) {
 
     fmt.Printf("%v\n", rt.SelectShortlist(k, 2))
 
+    fmt.Println("... Pass")
 }

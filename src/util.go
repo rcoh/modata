@@ -10,6 +10,7 @@ import (
     "fmt"
 )
 
+// REST convenience to marshall all the things to json
 func RespondWithStatus(status string, data interface{}) string {
     response := make(map[string]interface{})
     response["status"] = status
@@ -20,21 +21,23 @@ func RespondWithStatus(status string, data interface{}) string {
 }
 
 func RespondWithData(data interface{}) string {
-    return RespondWithStatus("OK", data);
+    return RespondWithStatus(OK, data);
 }
 
 func RespondOk() string {
-    return RespondWithStatus("OK", nil)
+    return RespondWithStatus(OK, nil)
 }
 
 func RespondNotFound() string {
-    return RespondWithStatus("NOTFOUND", nil)
+    return RespondWithStatus(NOTFOUND, nil)
 }
 
 func RespondNotOk() string {
-    return RespondWithStatus("NOTOK", nil)
+    return RespondWithStatus(NOTOK, nil)
 }
 
+
+// String -> []Byte and visaversa
 func MakeHex(barray []byte) string {
     return hex.EncodeToString(barray)
 }
@@ -44,12 +47,15 @@ func MakeByteArray(str string) []byte {
     return data
 }
 
+// Creates a dictionary with a single key and a single value
 func KeyValue(key string, value string) map[string]string {
     response := make(map[string]string)
     response[key] = value
     return response
 }
 
+
+// GUID generation
 func MakeGUID() []byte {
 	// UID generation, basically simplified UUID rfc spec
 	hasher := sha1.New()
@@ -66,6 +72,7 @@ func MakeGUID() []byte {
 	return hasher.Sum(nil)
 }
 
+// SHA1s a string
 func Hash(value string) []byte {
     // Generate hash of the provided string
 	hasher := sha1.New()
@@ -77,3 +84,23 @@ func Hash(value string) []byte {
 	return hasher.Sum(nil)
 }
 
+func HashByte(value []byte) []byte {
+    hasher:= sha1.New()
+    hasher.Write(value)
+    return hasher.Sum(nil)
+}
+
+func MakeKey(source []byte) Key {
+    var pre []byte
+    pre = source
+    if (len(source) != IDLength) {
+        fmt.Println("Fixing source byte array")
+        pre = HashByte(source)
+    }
+    fmt.Println(pre)
+    k := Key{}
+    for i := range k {
+        k[i] = pre[i]
+    }
+    return k
+}

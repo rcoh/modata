@@ -5,12 +5,6 @@ import (
 	"container/list"
 )
 
-const IDLength = 20
-
-type NodeID [IDLength]byte
-
-type Key NodeID
-
 type Contact struct {
 	other NodeID
 	addr string
