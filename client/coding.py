@@ -47,8 +47,9 @@ def send_chunks_to_storage(chunks):
     for chunk_dict in chunks:
         digest = chunk_dict['digest']
         chunk = chunk_dict['data']
-        requests.post(SERVER + "upload", data={'key': digest, 'data': chunk})
-
+        resp = requests.post(SERVER + "upload", data={'key': digest, 'data': chunk}).json()
+        if resp['status'] != 'OK':
+            print resp
 
 def get_metadata(k, m, chunk_dicts):
     meta = {}
@@ -64,6 +65,8 @@ def get_chunks(metadata):
     m = metadata['m']
     # TODO: we only need k
     for chunk_dict in metadata['chunks']:
-        chunk_dict['data'] = requests.get(SERVER + "get/" + chunk_dict['digest']).text
+        resp = requests.get(SERVER + "get/" + chunk_dict['digest']).json()
+        if resp['status'] == 'OK':
+            chunk_dict['data'] = resp['data']
 
     return recombine_chunks(k, m, metadata['chunks'])
