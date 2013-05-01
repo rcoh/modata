@@ -5,15 +5,16 @@ import "testing"
 import "fmt"
 import "time"
 
+
 func TestSetup(t *testing.T) {
     fmt.Println("Test: Basic setup of clients and servers")
-
 }
 
 func TestBlock(t *testing.T) {
     fmt.Println("Test: Initialization of block service is correct")
     bs := StartBlockServer("localhost:1234")
     fmt.Println(bs)
+    time.Sleep(100 * time.Second)
 }
 
 func TestReplication(t *testing.T) {

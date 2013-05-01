@@ -6,7 +6,34 @@ import (
     "encoding/hex"
     "crypto/sha1"
     "time"
+    "encoding/json"
+    "fmt"
 )
+
+func RespondWithStatus(status string, data interface{}) string {
+    response := make(map[string]interface{})
+    response["status"] = status
+    response["data"] = data
+    edata, _ := json.Marshal(response)
+    fmt.Println(string(edata))
+    return string(edata)
+}
+
+func RespondWithData(data interface{}) string {
+    return RespondWithStatus("OK", data);
+}
+
+func RespondOk() string {
+    return RespondWithStatus("OK", nil)
+}
+
+func RespondNotFound() string {
+    return RespondWithStatus("NOTFOUND", nil)
+}
+
+func RespondNotOk() string {
+    return RespondWithStatus("NOTOK", nil)
+}
 
 func MakeHex(barray []byte) string {
     return hex.EncodeToString(barray)
