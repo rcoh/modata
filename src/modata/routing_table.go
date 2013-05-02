@@ -89,7 +89,6 @@ func MakeContactList(m []interface{}) ContactList {
 func MakeContactDistanceList(m []interface{}) ContactDistanceList {
     cdl := make(ContactDistanceList, len(m))
 
-    fmt.Println(m)
     for i, v := range m {
         cdl[i] = MakeContactDistance(v)
     }

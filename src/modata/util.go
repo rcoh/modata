@@ -20,7 +20,6 @@ func RespondWithStatus(status string, data interface{}) string {
     response["status"] = status
     response["data"] = data
     edata, _ := json.Marshal(response)
-    fmt.Println(string(edata))
     return string(edata)
 }
 
@@ -239,4 +238,7 @@ func HashByte(value []byte) []byte {
     return hasher.Sum(nil)
 }
 
-
+func Pretty(v interface{}) string {
+    jsonData,_ := json.MarshalIndent(v, "", "\t")
+    return string(jsonData)
+}

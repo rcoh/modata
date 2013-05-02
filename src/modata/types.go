@@ -75,11 +75,6 @@ func (l *ContactDistanceList) Pop() interface{} {
 }
 
 func (l *ContactDistanceList) Push(x interface{}) {
-    a := *l
-    n := len(a)
-    a = a[0 : n+1]
-    item := x.(ContactDistance)
-    a[n] = item
-    *l = a
+    *l = append(*l, x.(ContactDistance))
 }
 

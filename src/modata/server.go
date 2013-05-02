@@ -7,6 +7,7 @@ import (
     "strconv"
     "strings"
     "container/heap"
+    "encoding/json"
 )
 
 type BlockServer struct {
@@ -27,14 +28,11 @@ func (bs *BlockServer) Store (c *web.Context) string {
     key, exists := c.Params["key"]
     file, _ := c.Params["data"]
     // Should verify the key is the hash of the data
-    fmt.Println("Verify: ", VerifyKV(key, file))
-    fmt.Printf("Hashing %v to %v\n", key, Hash(key))
-
 
     if exists {
         hashedKey := MakeKey(Hash(key))
         bs.data[hashedKey] = file
-        return RespondWithData(KeyValue(key, file))
+        return RespondOk()
     } else {
         return RespondWithStatus("FAIL", "NO KEY")
     }
@@ -45,6 +43,32 @@ func (bs *BlockServer) Store (c *web.Context) string {
 // Do a distributed store
 //
 func (bs *BlockServer) IterativeStore (c *web.Context) string {
+    key, exists := c.Params["key"]
+
+    if exists {
+        hashedKey := Hash(key)
+        numreplicated := 0
+        nodelist := bs.IterativeFindNode(c, MakeHex(hashedKey))
+        result := make(map[string] interface{})
+        err := json.Unmarshal([]byte(nodelist), &result)
+        if (err == nil) {
+            contactList := MakeContactList(result["data"].([]interface{}))
+            for _, contact := range contactList {
+                status, _, dcontact := JsonPostUrl(contact.ToHttpAddress() +
+                                                   "/store?key=" + c.Params["key"] +
+                                                   "&data=" + c.Params["data"],
+                                                   bs.contact)
+                if (status == OK) {
+                    bs.UpdateContact(dcontact)
+                    numreplicated += 1
+                }
+            }
+            fmt.Println(contactList)
+        }
+        return RespondWithData(numreplicated)
+    } else {
+        return RespondWithStatus("FAIL", "NO KEY")
+    }
     return RespondOk()
 }
 
@@ -61,9 +85,25 @@ func (bs *BlockServer) FindValue(c *web.Context, key string) string {
 //
 // Do a distributed lookup
 //
-func (bs *BlockServer) IterativeFindValue (c *web.Context, key string) string {
-
-    return RespondOk()
+func (bs *BlockServer) IterativeFindValue (c *web.Context, key string) (value string) {
+    hashedKey := Hash(key)
+    nodelist := bs.IterativeFindNode(c, MakeHex(hashedKey))
+    result := make(map[string] interface{})
+    err := json.Unmarshal([]byte(nodelist), &result)
+    if (err == nil) {
+        contactList := MakeContactList(result["data"].([]interface{}))
+        for _, contact := range contactList {
+            status, ddata, dcontact := JsonGet(contact.ToHttpAddress() +
+            "/find-value/"+key,
+            bs.contact)
+            if (status == OK) {
+                bs.UpdateContact(dcontact)
+                value = ddata.(string)
+                break
+            }
+        }
+    }
+    return RespondWithData(value)
 }
 
 func VerifyKV(key string, value string) bool {
@@ -109,13 +149,15 @@ func (bs *BlockServer) IterativeFindNode (c *web.Context, node string) string {
         closest := results.Peek()
 
         for i := 0; i < Alpha; i++ {
-            contact := heap.Pop(&contacts).(ContactDistance)
-            if (contact == ContactDistance{}) {
+            if (len(contacts) == 0) {
                 // No more nodes to check, we're done
                 done = true
                 break
             }
-            if (contacted[contact]) {
+
+            contact := heap.Pop(&contacts).(ContactDistance)
+            if (contact == ContactDistance{} || contacted[contact]) {
+                // Don't contact this node, try another one
                 i -= 1
                 continue
             }
@@ -130,12 +172,9 @@ func (bs *BlockServer) IterativeFindNode (c *web.Context, node string) string {
                 heap.Push(&results, contact)
                 bs.UpdateContact(contact.Contact)
                 contactList := MakeContactDistanceList(data.([]interface{}))
-                fmt.Println(contactList)
-                /*
                 for _, dcontact := range contactList {
                     heap.Push(&contacts, dcontact)
                 }
-                */
             } else {
                 fmt.Println("All of the problems")
                 // Handle removing bad nodes
@@ -143,6 +182,7 @@ func (bs *BlockServer) IterativeFindNode (c *web.Context, node string) string {
         }
         if closest == results.Peek() {
             done = true
+            fmt.Println("Didn't find anything closer, done")
         }
     }
 
