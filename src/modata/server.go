@@ -4,16 +4,21 @@ import (
     "fmt"
     "sync"
     "web"
+    "strconv"
     "strings"
 )
 
 type BlockServer struct {
     mu sync.Mutex
     name string
+    addr string
+    port int
     id NodeID
     server *web.Server
     data map[Key]string
     routingTable *RoutingTable
+
+    MyContact Contact
 }
 
 //
@@ -90,6 +95,10 @@ func StartBlockServer(name string) *BlockServer{
 
     bs.id = MakeNode(id)
     bs.name = name
+    comps := strings.Split(name, ":")
+    bs.addr = comps[0]
+    bs.port, _ = strconv.Atoi(comps[1])
+    bs.MyContact = Contact{bs.id, bs.addr, bs.port}
     bs.data = make(map[Key]string)
     bs.server = web.NewServer()
     bs.routingTable = NewRoutingTable(20, id)
