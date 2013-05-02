@@ -98,6 +98,17 @@ func MakeByteArray(str string) []byte {
     return data
 }
 
+func MakeNodeID(str string) (id NodeID) {
+    s := MakeByteArray(str)
+    if len(s) != IDLength {
+        return id
+    }
+    for i, v := range s {
+        id[i] = v
+    }
+    return id
+}
+
 // Creates a dictionary with a single key and a single value
 func KeyValue(key string, value string) map[string]string {
     response := make(map[string]string)
