@@ -4,6 +4,7 @@ import (
     "fmt"
     "sync"
     "web"
+    "strconv"
     "strings"
     "strconv"
     "container/heap"
@@ -16,6 +17,8 @@ type BlockServer struct {
     server *web.Server
     data map[Key]string
     routingTable *RoutingTable
+
+    MyContact Contact
 }
 
 //
