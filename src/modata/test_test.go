@@ -34,6 +34,8 @@ func TestBlock(t *testing.T) {
     }
     fmt.Println(nodeid)
 
+    status, data, nodeid = JsonGet("http://localhost:1234/ping")
+
     // a := NodeID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
     b := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
     c := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
