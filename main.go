@@ -5,7 +5,6 @@ import (
     "modata"
     "fmt"
     "time"
-    "strings"
 )
 
 func main() {
@@ -47,15 +46,6 @@ func main() {
 
     fmt.Println(bs)
     fmt.Println(rs)
-
-    // Bootstrap if requested
-    if *bootstrap != "" {
-        servers := strings.Split(*bootstrap, ",")
-        for _, s := range servers {
-                status, _, _ := modata.JsonGet("http://" + s + "/ping", bs.MyContact)
-                fmt.Printf("Ping status from %v: %v\n", s, status)
-        }
-    }
 
     // Spin loop foreverz
     for *isBlock || *isReplication {
