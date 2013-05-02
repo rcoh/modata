@@ -84,6 +84,26 @@ func (l ContactList) Swap(i, j int) {
 	l[j] = t
 }
 
+func MakeContactList(m []interface{}) ContactList {
+	cl := make(ContactList, len(m))
+
+	for i, v := range m {
+		cl[i] = MakeContact(v)
+	}
+	return cl
+}
+
+func MakeContact(v interface{}) Contact {
+	m := v.(map[string]interface{})
+	id := m["ID"].([]interface{})
+	nid := [IDLength]byte{}
+	for i, v := range id {
+		nid[i] = byte(v.(float64))
+	}
+
+	return Contact{nid, m["Addr"].(string), int(m["Port"].(float64))}
+}
+
 func (rt *RoutingTable) Init() {
 	for _, b := range rt.buckets {
 		b.Init()
@@ -153,5 +173,8 @@ func (rt *RoutingTable) FindClosest(k NodeID, alpha int) (shortlist ContactList)
 
 	sort.Sort(shortlist)
 
+	if alpha > len(shortlist) {
+		return shortlist
+	}
 	return shortlist[:alpha]
 }

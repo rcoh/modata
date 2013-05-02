@@ -51,7 +51,7 @@ func TestBlock(t *testing.T) {
     bs.routingTable.Update(ct)
 
     status, data, nodeid = JsonGet("http://localhost:1234/find-node/400000000000000000000000000000000000000000")
-    fmt.Printf("Find node: %v\n", data)
+    fmt.Printf("Find node: %v\n", MakeContactList(data.([]interface{})))
 
     fmt.Println("... Pass")
 }
