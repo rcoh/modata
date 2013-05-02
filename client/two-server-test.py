@@ -1,7 +1,6 @@
 import coding
 import restlib
 from runner import ServerManager
-import time
 
 manager = ServerManager()
 manager.async_start_block_server(1234)
