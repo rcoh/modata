@@ -17,21 +17,22 @@ func TestBlock(t *testing.T) {
     fmt.Println(bs)
 
 
-    status, data := JsonGet("http://localhost:1234/find-value/foo")
+    status, data, nodeid := JsonGet("http://localhost:1234/find-value/foo")
     if (status != NOTFOUND) {
         fmt.Println(data)
         t.Errorf("Nonexistent key exists\n")
     }
 
-    status, data = JsonPostUrl("http://localhost:1234/store?key=foo&data=bar")
+    status, data, nodeid = JsonPostUrl("http://localhost:1234/store?key=foo&data=bar")
     if (status != OK) {
         t.Errorf("Could not post\n")
     }
 
-    status, data = JsonGet("http://localhost:1234/find-value/foo")
+    status, data, nodeid = JsonGet("http://localhost:1234/find-value/foo")
     if (status != OK && data != "bar") {
         t.Errorf("Incorrect data exists\n")
     }
+    fmt.Println(nodeid)
 
     fmt.Println("... Pass")
 }

@@ -9,7 +9,7 @@ import (
 type BlockServer struct {
     mu sync.Mutex
     name string
-    identifier string
+    id NodeID
     server *web.Server
     data map[Key]string
 }
@@ -28,18 +28,18 @@ func (bs *BlockServer) Store (c *web.Context) string {
     if exists {
         hashedKey := MakeKey(Hash(key))
         bs.data[hashedKey] = file
-        return RespondWithData(KeyValue(key, file))
+        return RespondWithData(KeyValue(key, file), bs.id)
     } else {
-        return RespondWithStatus("FAIL", "NO KEY")
+        return RespondWithStatus("FAIL", "NO KEY", bs.id)
     }
-    return RespondNotOk()
+    return RespondNotOk(bs.id)
 }
 
 //
 // Do a distributed store
 //
 func (bs *BlockServer) IterativeStore (c *web.Context) string {
-    return RespondOk()
+    return RespondOk(bs.id)
 }
 
 // Locally find a value
@@ -47,9 +47,9 @@ func (bs *BlockServer) FindValue(c *web.Context, key string) string {
     hashedKey := MakeKey(Hash(key))
     value, ok := bs.data[hashedKey]
     if ok {
-        return RespondWithData(value)
+        return RespondWithData(value, bs.id)
     }
-    return RespondNotFound()
+    return RespondNotFound(bs.id)
 }
 
 //
@@ -58,7 +58,7 @@ func (bs *BlockServer) FindValue(c *web.Context, key string) string {
 func (bs *BlockServer) IterativeFindValue (c *web.Context, key string) string {
     hashedKey := MakeKey(Hash(key))
     fmt.Println(hashedKey)
-    return RespondOk()
+    return RespondOk(bs.id)
 }
 
 func VerifyKV(key string, value string) bool {
@@ -69,21 +69,21 @@ func VerifyKV(key string, value string) bool {
 // Locally find a node
 //
 func (bs *BlockServer) FindNode(c *web.Context, node string) string {
-    return RespondOk()
+    return RespondOk(bs.id)
 }
 
 //
 // Do a distributed find node
 //
 func (bs *BlockServer) IterativeFindNode (c *web.Context, node string) string {
-    return RespondOk()
+    return RespondOk(bs.id)
 }
 
 func StartBlockServer(name string) *BlockServer{
     bs := new(BlockServer)
 
-    // Node identifier for chord
-    bs.identifier = MakeHex(MakeGUID())
+    // Node id for kademlia
+    bs.id = MakeNode(MakeGUID())
     bs.name = name
     bs.data = make(map[Key]string)
     bs.server = web.NewServer()
@@ -132,7 +132,7 @@ func StartBlockServer(name string) *BlockServer{
             c.ContentType("json")
             response := fmt.Sprintf("Ping from %v acknowledged by %v\n",
                                      c.Request.RemoteAddr, bs.name)
-            return RespondWithData(response)
+            return RespondWithData(response, bs.id)
         })
 
         fmt.Printf("Listening on %v\n", name)

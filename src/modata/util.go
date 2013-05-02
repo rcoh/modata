@@ -45,16 +45,16 @@ func RespondNotOk(node NodeID) string {
 func JsonGet(uri string) (string, interface{}, interface{}) {
     // Make the http request
     resp, err := http.Get(uri)
-    if (err != nil) { return ERROR, err }
+    if (err != nil) { return ERROR, err, nil}
 
     // Decode the body of the response into a []byte
     response := make(map[string]interface{})
     raw, err := ioutil.ReadAll(resp.Body)
-    if (err != nil) { return ERROR, err }
+    if (err != nil) { return ERROR, err, nil }
 
     // Decode the []byte into the standard mapping
     err = json.Unmarshal(raw, &response)
-    if (err != nil) { return ERROR, err }
+    if (err != nil) { return ERROR, err, nil }
 
     // Return the values TODO: check for existence of correct keys
     return response["status"].(string), response["data"], response["node"]
@@ -67,16 +67,16 @@ func JsonPost(uri string, data map[string]string) (string, interface{}, interfac
         values.Set(k, v)
     }
     resp, err := http.PostForm(uri, values)
-    if (err != nil) { return ERROR, err }
+    if (err != nil) { return ERROR, err, nil }
 
     // Decode the body of the response into a []byte
     response := make(map[string]interface{})
     raw, err := ioutil.ReadAll(resp.Body)
-    if (err != nil) { return ERROR, err }
+    if (err != nil) { return ERROR, err, nil }
 
     // Decode the []byte into the standard mapping
     err = json.Unmarshal(raw, &response)
-    if (err != nil) { return ERROR, err }
+    if (err != nil) { return ERROR, err, nil }
 
     // Return the values TODO: check for existence of correct keys
     return response["status"].(string), response["data"], response["node"]
@@ -160,8 +160,20 @@ func MakeKey(source []byte) Key {
         fmt.Println("Fixing source byte array")
         pre = HashByte(source)
     }
-    fmt.Println(pre)
     k := Key{}
+    for i := range k {
+        k[i] = pre[i]
+    }
+    return k
+}
+
+func MakeNode(source []byte) NodeID {
+    var pre []byte
+    pre = source
+    k := NodeID{}
+    if (len(source) != IDLength) {
+        return k
+    }
     for i := range k {
         k[i] = pre[i]
     }
