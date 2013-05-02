@@ -4,6 +4,7 @@ import (
     "fmt"
     "sync"
     "web"
+    "strings"
 )
 
 type BlockServer struct {
@@ -12,6 +13,7 @@ type BlockServer struct {
     identifier string
     server *web.Server
     data map[Key]string
+    routingTable *RoutingTable
 }
 
 //
@@ -69,7 +71,9 @@ func VerifyKV(key string, value string) bool {
 // Locally find a node
 //
 func (bs *BlockServer) FindNode(c *web.Context, node string) string {
-    return RespondOk()
+    results := bs.routingTable.FindClosest(MakeNodeID(node), bs.routingTable.k)
+    fmt.Printf("FindNode: %v\n", results)
+    return RespondWithStatus(OK, results)
 }
 
 //
@@ -83,27 +87,33 @@ func StartBlockServer(name string) *BlockServer{
     bs := new(BlockServer)
 
     // Node identifier for chord
-    bs.identifier = MakeHex(MakeGUID())
+    id := MakeGUID()
+
+    bs.identifier = MakeHex(id)
     bs.name = name
     bs.data = make(map[Key]string)
     bs.server = web.NewServer()
+    bs.routingTable = NewRoutingTable(20, id)
 
     go func() {
         // Primitive store, stores the key,value in the local data
         bs.server.Post("/store", func (c *web.Context) string {
             c.ContentType("json")
+            bs.updateContact(c)
             return bs.Store(c)
         })
 
         // Kademlia based store, does smart stuff
         bs.server.Post("/distributed/store", func (c *web.Context) string {
             c.ContentType("json")
+            bs.updateContact(c)
             return bs.IterativeStore(c)
         })
 
         // Primitive find-value
         bs.server.Get("/find-value/(.*)", func (c *web.Context, key string) string {
             c.ContentType("json")
+            bs.updateContact(c)
             return bs.FindValue(c, key)
         })
 
@@ -111,6 +121,7 @@ func StartBlockServer(name string) *BlockServer{
         // Kademlia based find-value, does smart stuff
         bs.server.Get("/distributed/find-value/(.*)", func (c *web.Context, key string) string {
             c.ContentType("json")
+            bs.updateContact(c)
             return bs.IterativeFindValue(c, key)
         })
 
@@ -118,18 +129,21 @@ func StartBlockServer(name string) *BlockServer{
         // Primitive find-node
         bs.server.Get("/find-node/(.*)", func (c *web.Context, node string) string {
             c.ContentType("json")
+            bs.updateContact(c)
             return bs.FindNode(c, node)
         })
 
         // Kademlia based find-node, does smart stuff
         bs.server.Get("/distributed/find-node/(.*)", func (c *web.Context, node string) string {
             c.ContentType("json")
+            bs.updateContact(c)
             return bs.IterativeFindNode(c, node)
         })
 
         // Ping endpoint, sees if the server is alive
         bs.server.Get("/ping", func (c *web.Context) string {
             c.ContentType("json")
+            bs.updateContact(c)
             response := fmt.Sprintf("Ping from %v acknowledged by %v\n",
                                      c.Request.RemoteAddr, bs.name)
             return RespondWithData(response)
@@ -140,6 +154,12 @@ func StartBlockServer(name string) *BlockServer{
     }();
 
     return bs
+}
+
+func (bs *BlockServer) updateContact(c *web.Context) {
+    results := strings.Split(c.Request.RemoteAddr, ":")
+    ip, port := results[0], results[1]
+    fmt.Printf("Contact from %v / %v\n", ip, port)
 }
 
 

@@ -33,6 +33,25 @@ func TestBlock(t *testing.T) {
         t.Errorf("Incorrect data exists\n")
     }
 
+    // a := NodeID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+    b := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+    c := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
+    d := NodeID{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 1}
+
+    ct := Contact{b, "", 0}
+    bs.routingTable.Update(ct)
+    ct.Port = 1
+    bs.routingTable.Update(ct)
+
+    ct.ID = c
+    bs.routingTable.Update(ct)
+
+    ct.ID = d
+    bs.routingTable.Update(ct)
+
+    status, data = JsonGet("http://localhost:1234/find-node/400000000000000000000000000000000000000000")
+    fmt.Printf("Find node: %v\n", data)
+
     fmt.Println("... Pass")
 }
 
@@ -99,19 +118,29 @@ func TestShortlist(t *testing.T) {
     k := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
     b := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+
+    c := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
+
+    d := NodeID{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 1}
     
     rt := RoutingTable{}
     rt.k = 20
     rt.me = a
 
-    c := Contact{b, "", 0}
-    rt.Update(c)
-    c.port = 1
-    rt.Update(c)
+    ct := Contact{b, "", 0}
+    rt.Update(ct)
+    ct.Port = 1
+    rt.Update(ct)
+
+    ct.ID = c
+    rt.Update(ct)
+
+    ct.ID = d
+    rt.Update(ct)
 
     fmt.Printf("%v\n", rt.buckets[1].Front().Value);
 
-    fmt.Printf("%v\n", rt.FindClosest(k, 2))
+    fmt.Printf("%v\n", rt.FindClosest(k, 4))
 
     fmt.Println("... Pass")
 }
