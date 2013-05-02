@@ -1,12 +1,9 @@
 import coding
 import restlib
 from runner import ServerManager
-import time
 
 manager = ServerManager()
 manager.async_start_block_server(1234)
-
-time.sleep(2)
 
 try:
     data_chunks = [str(x) for x in xrange(10)]
