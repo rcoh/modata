@@ -17,24 +17,24 @@ func TestBlock(t *testing.T) {
     fmt.Println(bs)
 
 
-    status, data, nodeid := JsonGet("http://localhost:1234/find-value/foo")
+    status, data, nodeid := JsonGet("http://localhost:1234/find-value/foo", Contact{})
     if (status != NOTFOUND) {
         fmt.Println(data)
         t.Errorf("Nonexistent key exists\n")
     }
 
-    status, data, nodeid = JsonPostUrl("http://localhost:1234/store?key=foo&data=bar")
+    status, data, nodeid = JsonPostUrl("http://localhost:1234/store?key=foo&data=bar", Contact{})
     if (status != OK) {
         t.Errorf("Could not post\n")
     }
 
-    status, data, nodeid = JsonGet("http://localhost:1234/find-value/foo")
+    status, data, nodeid = JsonGet("http://localhost:1234/find-value/foo", Contact{})
     if (status != OK && data != "bar") {
         t.Errorf("Incorrect data exists\n")
     }
     fmt.Println(nodeid)
 
-    status, data, nodeid = JsonGet("http://localhost:1234/ping")
+    status, data, nodeid = JsonGet("http://localhost:1234/ping", Contact{})
 
     // a := NodeID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
     b := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
@@ -52,7 +52,7 @@ func TestBlock(t *testing.T) {
     ct.ID = d
     bs.routingTable.Update(ct)
 
-    status, data, nodeid = JsonGet("http://localhost:1234/find-node/400000000000000000000000000000000000000000")
+    status, data, nodeid = JsonGet("http://localhost:1234/find-node/400000000000000000000000000000000000000000", Contact{})
     fmt.Printf("Find node: %v\n", MakeContactList(data.([]interface{})))
 
     fmt.Println("... Pass")

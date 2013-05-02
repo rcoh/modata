@@ -42,9 +42,18 @@ func RespondNotOk(node NodeID) string {
 
 
 // REST convenience to unmarshall all the things from json
-func JsonGet(uri string) (string, interface{}, interface{}) {
+func JsonGet(uri string, self Contact) (string, interface{}, interface{}) {
     // Make the http request
-    resp, err := http.Get(uri)
+    client := &http.Client{}
+    req, _ := http.NewRequest("GET", uri, nil)
+    
+    nullID := NodeID{}
+    if self.ID != nullID {
+        req.Header.Set("Modata-NodeID", HexNodeID(self.ID))
+        req.Header.Set("Modata-Address", self.Addr)
+        req.Header.Set("Modata-Port", fmt.Sprintf("%v", self.Port))
+    }
+    resp, err := client.Do(req)
     if (err != nil) { return ERROR, err, nil}
 
     // Decode the body of the response into a []byte
@@ -60,12 +69,26 @@ func JsonGet(uri string) (string, interface{}, interface{}) {
     return response["status"].(string), response["data"], response["node"]
 }
 
-func JsonPost(uri string, data map[string]string) (string, interface{}, interface{}) {
+func JsonPost(uri string, data map[string]string, self Contact) (string, interface{}, interface{}) {
     // Make the http post request
     values := make(url.Values)
     for k,v := range data {
         values.Set(k, v)
     }
+
+    // FIXME: The following is how things should work when we set headers,
+    // but I can't figure out how to encode and set the form body properly...
+
+    // client := &http.Client{}
+    // req, _ := http.NewRequest("POST", uri, values)
+    // 
+    // nullID := NodeID{}
+    // if self.ID != NullID {
+    //     req.Header.Set("Modata-NodeID", HexNodeID(self.ID))
+    //     req.Header.Set("Modata-Address", self.Addr)
+    //     req.Header.Set("Modata-Port", fmt.Sprintf("%v", self.Port))
+    // }
+    // resp, err := client.Do(req)
     resp, err := http.PostForm(uri, values)
     if (err != nil) { return ERROR, err, nil }
 
@@ -82,9 +105,9 @@ func JsonPost(uri string, data map[string]string) (string, interface{}, interfac
     return response["status"].(string), response["data"], response["node"]
 }
 
-func JsonPostUrl(uri string) (string, interface{}, interface{}) {
+func JsonPostUrl(uri string, self Contact) (string, interface{}, interface{}) {
     blank := make(map[string]string)
-    return JsonPost(uri, blank)
+    return JsonPost(uri, blank, self)
 }
 
 // Done with REST convenience methods
@@ -92,6 +115,15 @@ func JsonPostUrl(uri string) (string, interface{}, interface{}) {
 // String -> []Byte and visaversa
 func MakeHex(barray []byte) string {
     return hex.EncodeToString(barray)
+}
+
+func HexNodeID(id NodeID) string {
+    return MakeHex(MakeByteSlice(id))
+}
+
+func MakeByteSlice(id NodeID) []byte {
+    var a [IDLength]byte = id
+    return a[:]
 }
 
 func MakeByteArray(str string) []byte {

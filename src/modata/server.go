@@ -146,12 +146,6 @@ func StartBlockServer(name string) *BlockServer{
             response := fmt.Sprintf("Ping from %v acknowledged by %v\n",
                                      c.Request.RemoteAddr, bs.name)
 
-            // Ping back
-            go func() {
-                status, _, _ := JsonGet(c.Request.RemoteAddr + "/ping")
-                fmt.Printf("Return ping status: %v\n", status)
-            }();
-
             return RespondWithData(response, bs.id)
         })
 
