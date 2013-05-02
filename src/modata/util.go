@@ -11,42 +11,56 @@ import (
     "net/http"
     "net/url"
     "io/ioutil"
+    "strings"
 )
 
 // REST convenience to marshall all the things to json
-func RespondWithStatus(status string, data interface{}, node NodeID) string {
+func RespondWithStatus(status string, data interface{}) string {
     response := make(map[string]interface{})
     response["status"] = status
     response["data"] = data
-    response["node"] = node
     edata, _ := json.Marshal(response)
     fmt.Println(string(edata))
     return string(edata)
 }
 
-func RespondWithData(data interface{}, node NodeID) string {
-    return RespondWithStatus(OK, data, node);
+func RespondWithData(data interface{}) string {
+    return RespondWithStatus(OK, data);
 }
 
-func RespondOk(node NodeID) string {
-    return RespondWithStatus(OK, nil, node)
+func RespondOk() string {
+    return RespondWithStatus(OK, nil)
 }
 
-func RespondNotFound(node NodeID) string {
-    return RespondWithStatus(NOTFOUND, nil, node)
+func RespondNotFound() string {
+    return RespondWithStatus(NOTFOUND, nil)
 }
 
-func RespondNotOk(node NodeID) string {
-    return RespondWithStatus(NOTOK, nil, node)
+func RespondNotOk() string {
+    return RespondWithStatus(NOTOK, nil)
 }
 
+func DecodeModataHeaders (header http.Header) (Contact, error) {
+    node := header.Get("Modata-NodeID")
+    nodeID := MakeNodeID(node)
+    addr := header.Get("Modata-Address")
+    port, err := strconv.Atoi(header.Get("Modata-Port"))
+
+    contact := Contact {nodeID, addr, port}
+    if (node != "" && addr != "" && err == nil) {
+        return contact, nil
+    }
+    return contact, fmt.Errorf("Invalid Modata headers")
+}
 
 // REST convenience to unmarshall all the things from json
-func JsonGet(uri string, self Contact) (string, interface{}, interface{}) {
+func JsonGet(uri string, self Contact) (string, interface{}, Contact) {
+    dstContact := Contact{}
+
     // Make the http request
     client := &http.Client{}
     req, _ := http.NewRequest("GET", uri, nil)
-    
+
     nullID := NodeID{}
     if self.ID != nullID {
         req.Header.Set("Modata-NodeID", HexNodeID(self.ID))
@@ -54,58 +68,72 @@ func JsonGet(uri string, self Contact) (string, interface{}, interface{}) {
         req.Header.Set("Modata-Port", fmt.Sprintf("%v", self.Port))
     }
     resp, err := client.Do(req)
-    if (err != nil) { return ERROR, err, nil}
+    if (err != nil) { return ERROR, err, dstContact}
+
+    // Decode the headers into a contact
+    dstContact, err = DecodeModataHeaders(resp.Header)
+    if (err != nil) {
+        dstContact = Contact{}
+    }
 
     // Decode the body of the response into a []byte
     response := make(map[string]interface{})
     raw, err := ioutil.ReadAll(resp.Body)
-    if (err != nil) { return ERROR, err, nil }
+    resp.Body.Close()
+    if (err != nil) { return ERROR, err, dstContact}
 
     // Decode the []byte into the standard mapping
     err = json.Unmarshal(raw, &response)
-    if (err != nil) { return ERROR, err, nil }
+    if (err != nil) { return ERROR, err, dstContact}
 
     // Return the values TODO: check for existence of correct keys
-    return response["status"].(string), response["data"], response["node"]
+    return response["status"].(string), response["data"], dstContact
 }
 
-func JsonPost(uri string, data map[string]string, self Contact) (string, interface{}, interface{}) {
+func JsonPost(uri string, data map[string]string, self Contact) (string, interface{}, Contact) {
+    dstContact := Contact{}
+
     // Make the http post request
     values := make(url.Values)
     for k,v := range data {
         values.Set(k, v)
     }
 
-    // FIXME: The following is how things should work when we set headers,
-    // but I can't figure out how to encode and set the form body properly...
+    client := &http.Client{}
+    req, _ := http.NewRequest("POST", uri, strings.NewReader(values.Encode()))
 
-    // client := &http.Client{}
-    // req, _ := http.NewRequest("POST", uri, values)
-    // 
-    // nullID := NodeID{}
-    // if self.ID != NullID {
-    //     req.Header.Set("Modata-NodeID", HexNodeID(self.ID))
-    //     req.Header.Set("Modata-Address", self.Addr)
-    //     req.Header.Set("Modata-Port", fmt.Sprintf("%v", self.Port))
-    // }
-    // resp, err := client.Do(req)
-    resp, err := http.PostForm(uri, values)
-    if (err != nil) { return ERROR, err, nil }
+    req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+    nullID := NodeID{}
+    if self.ID != nullID {
+        req.Header.Set("Modata-NodeID", HexNodeID(self.ID))
+        req.Header.Set("Modata-Address", self.Addr)
+        req.Header.Set("Modata-Port", fmt.Sprintf("%v", self.Port))
+    }
+
+    resp, err := client.Do(req)
+    if (err != nil) { return ERROR, err, dstContact}
+
+    // Decode the headers into a contact
+    dstContact, err = DecodeModataHeaders(resp.Header)
+    if (err != nil) {
+        dstContact = Contact{}
+    }
 
     // Decode the body of the response into a []byte
     response := make(map[string]interface{})
     raw, err := ioutil.ReadAll(resp.Body)
-    if (err != nil) { return ERROR, err, nil }
+    resp.Body.Close()
+    if (err != nil) { return ERROR, err, dstContact }
 
     // Decode the []byte into the standard mapping
     err = json.Unmarshal(raw, &response)
-    if (err != nil) { return ERROR, err, nil }
+    if (err != nil) { return ERROR, err, dstContact }
 
     // Return the values TODO: check for existence of correct keys
-    return response["status"].(string), response["data"], response["node"]
+    return response["status"].(string), response["data"], dstContact
 }
 
-func JsonPostUrl(uri string, self Contact) (string, interface{}, interface{}) {
+func JsonPostUrl(uri string, self Contact) (string, interface{}, Contact) {
     blank := make(map[string]string)
     return JsonPost(uri, blank, self)
 }
@@ -142,6 +170,32 @@ func MakeNodeID(str string) (id NodeID) {
     return id
 }
 
+func MakeKey(source []byte) Key {
+    var pre []byte
+    pre = source
+    if (len(source) != IDLength) {
+        fmt.Println("Fixing source byte array")
+        pre = HashByte(source)
+    }
+    k := Key{}
+    for i := range k {
+        k[i] = pre[i]
+    }
+    return k
+}
+
+func MakeNode(source []byte) NodeID {
+    var pre []byte
+    pre = source
+    k := NodeID{}
+    if (len(source) != IDLength) {
+        return k
+    }
+    for i := range k {
+        k[i] = pre[i]
+    }
+    return k
+}
 // Creates a dictionary with a single key and a single value
 func KeyValue(key string, value string) map[string]string {
     response := make(map[string]string)
@@ -185,29 +239,4 @@ func HashByte(value []byte) []byte {
     return hasher.Sum(nil)
 }
 
-func MakeKey(source []byte) Key {
-    var pre []byte
-    pre = source
-    if (len(source) != IDLength) {
-        fmt.Println("Fixing source byte array")
-        pre = HashByte(source)
-    }
-    k := Key{}
-    for i := range k {
-        k[i] = pre[i]
-    }
-    return k
-}
 
-func MakeNode(source []byte) NodeID {
-    var pre []byte
-    pre = source
-    k := NodeID{}
-    if (len(source) != IDLength) {
-        return k
-    }
-    for i := range k {
-        k[i] = pre[i]
-    }
-    return k
-}

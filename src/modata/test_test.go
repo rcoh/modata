@@ -16,30 +16,31 @@ func TestBlock(t *testing.T) {
     time.Sleep(2 * time.Second)
     fmt.Println(bs)
 
+    b := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+    c := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
+    d := NodeID{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 1}
 
-    status, data, nodeid := JsonGet("http://localhost:1234/find-value/foo", Contact{})
+    status, data, contact := JsonGet("http://localhost:1234/find-value/foo", Contact{})
     if (status != NOTFOUND) {
         fmt.Println(data)
         t.Errorf("Nonexistent key exists\n")
     }
 
-    status, data, nodeid = JsonPostUrl("http://localhost:1234/store?key=foo&data=bar", Contact{})
+    status, data, contact = JsonPostUrl("http://localhost:1234/store?key=foo&data=bar",
+                                        Contact{b, "localhost", 3333})
     if (status != OK) {
         t.Errorf("Could not post\n")
     }
 
-    status, data, nodeid = JsonGet("http://localhost:1234/find-value/foo", Contact{})
+    status, data, contact = JsonGet("http://localhost:1234/find-value/foo", Contact{})
     if (status != OK && data != "bar") {
         t.Errorf("Incorrect data exists\n")
     }
-    fmt.Println(nodeid)
+    fmt.Println(contact)
 
-    status, data, nodeid = JsonGet("http://localhost:1234/ping", Contact{})
+    status, data, contact = JsonGet("http://localhost:1234/ping", Contact{})
 
     // a := NodeID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-    b := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-    c := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
-    d := NodeID{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 1}
 
     ct := Contact{b, "", 0}
     bs.routingTable.Update(ct)
@@ -52,7 +53,7 @@ func TestBlock(t *testing.T) {
     ct.ID = d
     bs.routingTable.Update(ct)
 
-    status, data, nodeid = JsonGet("http://localhost:1234/find-node/400000000000000000000000000000000000000000", Contact{})
+    status, data, contact = JsonGet("http://localhost:1234/find-node/400000000000000000000000000000000000000000", Contact{})
     fmt.Printf("Find node: %v\n", MakeContactList(data.([]interface{})))
 
     fmt.Println("... Pass")
@@ -91,7 +92,8 @@ func TestBucketing(t *testing.T) {
     fmt.Println("... Pass")
 }
 
-func ExampleUpdate() {
+func TestExampleUpdate(t *testing.T) {
+    fmt.Println("Test: Update")
     a := NodeID{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
     b := NodeID{192, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
     rt := RoutingTable{}
@@ -109,6 +111,7 @@ func ExampleUpdate() {
 
     fmt.Printf("Update 2: Size of bucket 1: %d\n", rt.buckets[1].Len())
 
+    fmt.Println("... Pass")
     // Output: Update 1: Size of bucket 1: 1
     // Update 2: Size of bucket 1: 1
 }

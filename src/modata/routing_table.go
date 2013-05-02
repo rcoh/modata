@@ -4,12 +4,17 @@ import (
 	"fmt"
 	"container/list"
 	"sort"
+    "strconv"
 )
 
 type Contact struct {
 	ID NodeID
 	Addr string
 	Port int
+}
+
+func (c *Contact) ToHttpAddress() string {
+    return "http://" + c.Addr + ":"+ strconv.Itoa(c.Port)
 }
 
 type Bucket struct {

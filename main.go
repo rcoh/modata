@@ -17,6 +17,10 @@ func main() {
     replicationName := flag.String("replication-server",
                                    "localhost:1337",
                                    "Name of replication server")
+    bootstrapName := flag.String("bootstrap",
+                                 "",
+                                 "Bootstrap server and port to contact")
+
     flag.Parse()
 
     fmt.Printf("Block: %v at %v\n", *isBlock, *blockName)
@@ -27,6 +31,10 @@ func main() {
     if (*isBlock) {
         fmt.Println("Starting block server!")
         bs = modata.StartBlockServer(*blockName)
+        // Ping the bootstrap
+        fmt.Println("Pinging the bootstrap ...")
+        _, _, contact := modata.JsonGet("http://" + *bootstrapName + "/ping", bs.Contact())
+        bs.UpdateContact(contact)
     }
 
     // Replication Server
