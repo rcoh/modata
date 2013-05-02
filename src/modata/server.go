@@ -166,9 +166,21 @@ func StartBlockServer(name string) *BlockServer{
 }
 
 func (bs *BlockServer) updateContact(c *web.Context) {
-    results := strings.Split(c.Request.RemoteAddr, ":")
-    ip, port := results[0], results[1]
-    fmt.Printf("Contact from %v / %v\n", ip, port)
+    h := c.Request.Header
+    contact := Contact{}
+
+    if h.Get("Modata-Address") == "" {
+        // No valid contact data, ignore
+        return
+    }
+
+    contact.ID = MakeNodeID(h.Get("Modata-NodeID"))
+    contact.Addr = h.Get("Modata-Address")
+    contact.Port, _ = strconv.Atoi(h.Get("Modata-Port"))
+
+    fmt.Printf("Got contact from header: %v\n", contact)
+
+    bs.routingTable.Update(contact)
 }
 
 
