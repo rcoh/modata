@@ -1,15 +1,15 @@
 package modata
 
 import (
-	// "fmt"
+	"fmt"
 	"container/list"
 	"sort"
 )
 
 type Contact struct {
-	id NodeID
-	addr string
-	port int
+	ID NodeID
+	Addr string
+	Port int
 }
 
 type Bucket struct {
@@ -20,6 +20,20 @@ type RoutingTable struct {
 	k int
 	me NodeID
 	buckets [IDLength*8]Bucket
+}
+
+func NewRoutingTable(k int, id []byte) (rt *RoutingTable) {
+	if len(id) != IDLength {
+		return nil
+	}
+
+	rt = &RoutingTable{}
+	rt.k = k
+	for i, v := range id {
+		rt.me[i] = v
+	}
+
+	return rt
 }
 
 func Distance(a *NodeID, b *NodeID) (d NodeID) {
@@ -61,7 +75,7 @@ func (l ContactList) Len() int {
 }
 
 func (l ContactList) Less(i, j int) bool {
-	return l[i].id.LessThan(&l[j].id)
+	return l[i].ID.LessThan(&l[j].ID)
 }
 
 func (l ContactList) Swap(i, j int) {
@@ -91,13 +105,15 @@ func (rt *RoutingTable) BucketForNode(n NodeID) (i int) {
 }
 
 func (rt *RoutingTable) Update(c Contact) {
-	if rt.me == c.id {
+	if rt.me == c.ID {
 		// Ignore contacts with self
 		return
 	}
 
+	fmt.Printf("Update %v\n", c.ID)
+
 	// See if we already have this contact
-	bucket := &rt.buckets[rt.BucketForNode(c.id)]
+	bucket := &rt.buckets[rt.BucketForNode(c.ID)]
 	for e := bucket.Front(); e != nil; e = e.Next() {
 		if e.Value == c {
 			// New most recently contacted
