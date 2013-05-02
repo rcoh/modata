@@ -72,7 +72,6 @@ func VerifyKV(key string, value string) bool {
 //
 func (bs *BlockServer) FindNode(c *web.Context, node string) string {
     results := bs.routingTable.FindClosest(MakeNodeID(node), bs.routingTable.k)
-    fmt.Printf("FindNode: %v\n", results)
     return RespondWithStatus(OK, results, bs.id)
 }
 
@@ -146,6 +145,13 @@ func StartBlockServer(name string) *BlockServer{
             bs.updateContact(c)
             response := fmt.Sprintf("Ping from %v acknowledged by %v\n",
                                      c.Request.RemoteAddr, bs.name)
+
+            // Ping back
+            go func() {
+                status, _, _ := JsonGet(c.Request.RemoteAddr + "/ping")
+                fmt.Printf("Return ping status: %v\n", status)
+            }();
+
             return RespondWithData(response, bs.id)
         })
 

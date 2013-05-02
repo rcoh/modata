@@ -34,6 +34,8 @@ func TestBlock(t *testing.T) {
     }
     fmt.Println(nodeid)
 
+    status, data, nodeid = JsonGet("http://localhost:1234/ping")
+
     // a := NodeID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
     b := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
     c := NodeID{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
@@ -51,7 +53,7 @@ func TestBlock(t *testing.T) {
     bs.routingTable.Update(ct)
 
     status, data, nodeid = JsonGet("http://localhost:1234/find-node/400000000000000000000000000000000000000000")
-    fmt.Printf("Find node: %v\n", data)
+    fmt.Printf("Find node: %v\n", MakeContactList(data.([]interface{})))
 
     fmt.Println("... Pass")
 }
