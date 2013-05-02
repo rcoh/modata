@@ -13,6 +13,11 @@ type Contact struct {
 	Port int
 }
 
+type ContactDistance struct {
+    Contact Contact
+    Distance NodeID
+}
+
 func (c *Contact) ToHttpAddress() string {
     return "http://" + c.Addr + ":"+ strconv.Itoa(c.Port)
 }
@@ -71,23 +76,6 @@ func (a *NodeID) Equals(b *NodeID) bool {
 	return Compare(a, b) == 0
 }
 
-// Sort support for contact lists
-
-type ContactList []Contact
-
-func (l ContactList) Len() int {
-	return len(l)
-}
-
-func (l ContactList) Less(i, j int) bool {
-	return l[i].ID.LessThan(&l[j].ID)
-}
-
-func (l ContactList) Swap(i, j int) {
-	t := l[i]
-	l[i] = l[j]
-	l[j] = t
-}
 
 func MakeContactList(m []interface{}) ContactList {
 	cl := make(ContactList, len(m))
@@ -96,6 +84,16 @@ func MakeContactList(m []interface{}) ContactList {
 		cl[i] = MakeContact(v)
 	}
 	return cl
+}
+
+func MakeContactDistanceList(m []interface{}) ContactDistanceList {
+    cdl := make(ContactDistanceList, len(m))
+
+    fmt.Println(m)
+    for i, v := range m {
+        cdl[i] = MakeContactDistance(v)
+    }
+    return cdl
 }
 
 func MakeContact(v interface{}) Contact {
@@ -107,6 +105,18 @@ func MakeContact(v interface{}) Contact {
 	}
 
 	return Contact{nid, m["Addr"].(string), int(m["Port"].(float64))}
+}
+
+func MakeContactDistance(v interface{}) ContactDistance {
+	m := v.(map[string]interface{})
+
+    id := m["Distance"].([]interface{})
+	nid := [IDLength]byte{}
+	for i, v := range id {
+		nid[i] = byte(v.(float64))
+	}
+
+	return ContactDistance{MakeContact(m["Contact"]), nid}
 }
 
 func (rt *RoutingTable) Init() {
@@ -160,8 +170,8 @@ func (rt *RoutingTable) Update(c Contact) {
 	}
 }
 
-func (rt *RoutingTable) FindClosest(k NodeID, alpha int) (shortlist ContactList) {
-	shortlist = make(ContactList, 0, alpha)
+func (rt *RoutingTable) FindClosest(k NodeID, alpha int) (ContactDistanceList) {
+    shortlist := make(ContactDistanceList, 0, alpha)
 
 	idx := rt.BucketForNode(k)
 
@@ -170,16 +180,32 @@ func (rt *RoutingTable) FindClosest(k NodeID, alpha int) (shortlist ContactList)
 		bucket := &rt.buckets[idx]
 
 		for e := bucket.Front(); e != nil; e = e.Next() {
-			shortlist = append(shortlist, e.Value.(Contact))
+            value := e.Value.(Contact)
+            distance := Distance(&(value.ID), &k)
+			shortlist = append(shortlist, ContactDistance{value, distance})
 		}
 
 		idx -= 1
 	}
+
+    // Search upward too if we don't have enough
+    idx = rt.BucketForNode(k) + 1
+    for len(shortlist) < alpha && idx < IDLength * 8 {
+        bucket := &rt.buckets[idx]
+
+        for e := bucket.Front(); e != nil; e = e.Next() {
+            value := e.Value.(Contact)
+            distance := Distance(&(value.ID), &k)
+            shortlist = append(shortlist, ContactDistance{value, distance})
+        }
+        idx += 1
+    }
 
 	sort.Sort(shortlist)
 
 	if alpha > len(shortlist) {
 		return shortlist
 	}
-	return shortlist[:alpha]
+
+    return shortlist[:alpha]
 }

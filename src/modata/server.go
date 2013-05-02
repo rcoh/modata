@@ -6,6 +6,7 @@ import (
     "web"
     "strings"
     "strconv"
+    "container/heap"
 )
 
 type BlockServer struct {
@@ -71,6 +72,10 @@ func VerifyKV(key string, value string) bool {
 // Locally find a node
 //
 func (bs *BlockServer) FindNode(c *web.Context, node string) string {
+    nodeID := MakeNodeID(node)
+    if (nodeID == NodeID{}) {
+        return RespondWithStatus("NOTOK", "Invalid node identifier")
+    }
     results := bs.routingTable.FindClosest(MakeNodeID(node), bs.routingTable.k)
     return RespondWithData(results)
 }
@@ -80,31 +85,84 @@ func (bs *BlockServer) FindNode(c *web.Context, node string) string {
 //
 func (bs *BlockServer) IterativeFindNode (c *web.Context, node string) string {
     nodeID := MakeNodeID(node)
-    contacts := bs.routingTable.FindClosest(nodeID, Alpha)
-    closest := Closest(nodeID, contacts)
 
-    for _, contact := range contacts {
-        status, data, nodeid := JsonGet(contact.ToHttpAddress(), bs.contact)
-        fmt.Printf("%v, %v, %v\n", status, data, nodeid)
+    if (nodeID == NodeID{}) {
+        return RespondWithStatus("NOTOK", "Invalid node identifier")
     }
 
-    fmt.Println(contacts)
-    fmt.Println(closest)
+    // Keep track of contacts we need to find
+    contacts := bs.routingTable.FindClosest(nodeID, Alpha)
+    heap.Init(&contacts)
 
-    return RespondOk()
-}
+    // Keeps nodes that we are finding
+    results := make(ContactDistanceList, 0, bs.routingTable.k)
+    heap.Init(&results)
 
-func Closest (node NodeID, list ContactList) Contact {
-    if (len(list) == 0) { return Contact{} }
-    closest := list[0]
-    for _, contact := range list {
-        x := Distance(&(contact.ID), &node)
-        y := Distance(&(closest.ID), &node)
-        if x.LessThan(&y) {
-            closest = contact
+    // Have we contacted this node before
+    contacted := make(map[ContactDistance]bool)
+
+    done := false
+
+    for !done {
+        closest := results.Peek()
+
+        for i := 0; i < Alpha; i++ {
+            contact := heap.Pop(&contacts).(ContactDistance)
+            if (contact == ContactDistance{}) {
+                // No more nodes to check, we're done
+                done = true
+                break
+            }
+            if (contacted[contact]) {
+                i -= 1
+                continue
+            }
+
+            fmt.Printf("Making request to %v\n", contact)
+            status, data, _ := JsonGet(contact.Contact.ToHttpAddress() +
+                                              "/find-node/" + 
+                                              node,
+                                              bs.contact)
+            contacted[contact] = true
+            if (status == OK) {
+                heap.Push(&results, contact)
+                bs.UpdateContact(contact.Contact)
+                contactList := MakeContactDistanceList(data.([]interface{}))
+                fmt.Println(contactList)
+                /*
+                for _, dcontact := range contactList {
+                    heap.Push(&contacts, dcontact)
+                }
+                */
+            } else {
+                fmt.Println("All of the problems")
+                // Handle removing bad nodes
+            }
+        }
+        if closest == results.Peek() {
+            done = true
         }
     }
-    return closest
+
+    fmt.Printf("Results: %v\n", results)
+
+    result := make(ContactList, bs.routingTable.k)
+    contact := ContactDistance{}
+    last := 0
+    for index := range(result) {
+        for (contact == ContactDistance{} && len(results) > 0) {
+            contact = heap.Pop(&results).(ContactDistance)
+        }
+        if (contact != ContactDistance{}) {
+            result[index] = contact.Contact
+            contact = ContactDistance{}
+        } else {
+            last = index
+            break
+        }
+    }
+
+    return RespondWithData(result[:last])
 }
 
 func (bs *BlockServer) Contact() Contact {
