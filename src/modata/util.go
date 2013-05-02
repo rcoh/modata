@@ -14,34 +14,35 @@ import (
 )
 
 // REST convenience to marshall all the things to json
-func RespondWithStatus(status string, data interface{}) string {
+func RespondWithStatus(status string, data interface{}, node NodeID) string {
     response := make(map[string]interface{})
     response["status"] = status
     response["data"] = data
+    response["node"] = node
     edata, _ := json.Marshal(response)
     fmt.Println(string(edata))
     return string(edata)
 }
 
-func RespondWithData(data interface{}) string {
-    return RespondWithStatus(OK, data);
+func RespondWithData(data interface{}, node NodeID) string {
+    return RespondWithStatus(OK, data, node);
 }
 
-func RespondOk() string {
-    return RespondWithStatus(OK, nil)
+func RespondOk(node NodeID) string {
+    return RespondWithStatus(OK, nil, node)
 }
 
-func RespondNotFound() string {
-    return RespondWithStatus(NOTFOUND, nil)
+func RespondNotFound(node NodeID) string {
+    return RespondWithStatus(NOTFOUND, nil, node)
 }
 
-func RespondNotOk() string {
-    return RespondWithStatus(NOTOK, nil)
+func RespondNotOk(node NodeID) string {
+    return RespondWithStatus(NOTOK, nil, node)
 }
 
 
 // REST convenience to unmarshall all the things from json
-func JsonGet(uri string) (string, interface{}) {
+func JsonGet(uri string) (string, interface{}, interface{}) {
     // Make the http request
     resp, err := http.Get(uri)
     if (err != nil) { return ERROR, err }
@@ -56,10 +57,10 @@ func JsonGet(uri string) (string, interface{}) {
     if (err != nil) { return ERROR, err }
 
     // Return the values TODO: check for existence of correct keys
-    return response["status"].(string), response["data"]
+    return response["status"].(string), response["data"], response["node"]
 }
 
-func JsonPost(uri string, data map[string]string) (string, interface{}) {
+func JsonPost(uri string, data map[string]string) (string, interface{}, interface{}) {
     // Make the http post request
     values := make(url.Values)
     for k,v := range data {
@@ -78,10 +79,10 @@ func JsonPost(uri string, data map[string]string) (string, interface{}) {
     if (err != nil) { return ERROR, err }
 
     // Return the values TODO: check for existence of correct keys
-    return response["status"].(string), response["data"]
+    return response["status"].(string), response["data"], response["node"]
 }
 
-func JsonPostUrl(uri string) (string, interface{}) {
+func JsonPostUrl(uri string) (string, interface{}, interface{}) {
     blank := make(map[string]string)
     return JsonPost(uri, blank)
 }
