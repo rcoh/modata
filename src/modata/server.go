@@ -151,7 +151,7 @@ func (bs *BlockServer) IterativeFindNode (c *web.Context, node string) string {
     done := false
 
     for !done {
-        closest := results.Peek()
+        closest := results.Peek().(ContactDistance)
 
         for i := 0; i < Alpha; i++ {
             if (len(contacts) == 0) {
@@ -185,7 +185,11 @@ func (bs *BlockServer) IterativeFindNode (c *web.Context, node string) string {
                 // Handle removing bad nodes
             }
         }
-        if closest == results.Peek() {
+
+        candidate := contacts.Peek().(ContactDistance)
+        if ((candidate != ContactDistance{}) &&
+            !((&(candidate.Distance)).LessThan(&(closest.Distance)))) {
+            fmt.Println(len(contacts))
             done = true
             fmt.Println("Didn't find anything closer, done")
         }
@@ -196,11 +200,13 @@ func (bs *BlockServer) IterativeFindNode (c *web.Context, node string) string {
     result := make(ContactList, bs.routingTable.k)
     contact := ContactDistance{}
     last := 0
+    fmt.Println(nodeID)
     for index := range(result) {
         for (contact == ContactDistance{} && len(results) > 0) {
             contact = heap.Pop(&results).(ContactDistance)
         }
         if (contact != ContactDistance{}) {
+            fmt.Println(contact)
             result[index] = contact.Contact
             contact = ContactDistance{}
         } else {
