@@ -11,11 +11,12 @@ try:
     chunks_meta = coding.make_chunk_dicts(data_chunks)
 
     for chunk in chunks_meta:
-        restlib.store(chunk['data'], chunk['digest'])
+        restlib.store(chunk['data'], chunk['digest'], local=False)
 
     print len(chunks_meta), "items stored"
     success = True
     for chunk in chunks_meta:
+        print chunk['digest']
         data = restlib.findvalue(chunk['digest'])
         distrib_data = restlib.findvalue(chunk['digest'], local=False)
         if data != chunk['data']:
@@ -24,9 +25,11 @@ try:
         if distrib_data != chunk['data']:
             success = False
             print "DISTRIB DATA MISMATCH FOR DIGEST"
+            print "Expecting", chunk['data'], "got", distrib_data
         
     if success:
         print len(chunks_meta), "items retrieved sucessfully"
+        
 finally:
     manager.kill_block_server(1234)
     manager.kill_block_server(1235)

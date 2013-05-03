@@ -28,7 +28,12 @@ class ServerManager(object):
     servers = {}
     def async_start_block_server(self, port):
         def inline():
-            resp = envoy.run('go run ../main.go -block-server="localhost:%d"' % port)
+            if self.servers:
+                bootstrap = '-bootstrap="localhost:%d"' % self.servers.keys()[0]
+            else:
+                bootstrap = ""
+
+            resp = envoy.run('go run ../main.go -block-server="localhost:%d" %s' % (port, bootstrap))
             print resp.std_out
         p = Process(target=inline)
         p.start()

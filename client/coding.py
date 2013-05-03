@@ -68,7 +68,6 @@ def get_chunks(metadata):
     # TODO: we only need k
     for chunk_dict in metadata['chunks']:
         resp = restlib.findvalue(chunk_dict['digest'])
-        if resp['status'] == 'OK':
-            chunk_dict['data'] = resp['data']
+        chunk_dict['data'] = resp
 
     return recombine_chunks(k, m, metadata['chunks'])
