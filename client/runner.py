@@ -44,5 +44,11 @@ class ServerManager(object):
         self.servers[port].terminate()
         check_dead(port)
 
+    def kill_all(self):
+        for port in self.servers:
+            self.servers[port].terminate()
+            check_dead(port)
+
+
 
 

@@ -15,6 +15,7 @@ def digest_for_chunk(chunk):
 
 def send_chunks_get_metadata(data):
     k,m,chunks = erasure_chunk(data)
+    chunks = [c.encode("hex") for c in chunks]
     dict_chunks = make_chunk_dicts(chunks)
     send_chunks_to_storage(dict_chunks)
     return get_metadata(k, m, dict_chunks)
@@ -40,7 +41,7 @@ def recombine_chunks(k, m, chunks):
         used_data.append(chunk['data'])
         used_blocknums.append(chunk['blocknum'])
 
-    return ''.join(decer.decode(used_data[:k], used_blocknums[:k]))
+    return (''.join(decer.decode(used_data[:k], used_blocknums[:k]))).decode('hex')
 
 def make_chunk_dicts(chunks):
     return [{'digest': digest_for_chunk(data), 'data': data, 'blocknum': i} for i, data in enumerate(chunks)]
@@ -49,7 +50,8 @@ def send_chunks_to_storage(chunks):
     for chunk_dict in chunks:
         digest = chunk_dict['digest']
         chunk = chunk_dict['data']
-        resp = restlib.store(chunk, digest)
+        resp = restlib.store(chunk, digest, local=False)
+        print resp
         if resp['status'] != 'OK':
             print resp
 
@@ -67,7 +69,7 @@ def get_chunks(metadata):
     m = metadata['m']
     # TODO: we only need k
     for chunk_dict in metadata['chunks']:
-        resp = restlib.findvalue(chunk_dict['digest'])
+        resp = restlib.findvalue(chunk_dict['digest'], local=False)
         chunk_dict['data'] = resp
 
     return recombine_chunks(k, m, metadata['chunks'])
