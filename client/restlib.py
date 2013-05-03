@@ -14,7 +14,6 @@ def findvalue(digest, local=True, server=SERVER):
     else:
         dist = ""
     resp = requests.get(server + dist + "find-value/" + digest).json()
-    print resp
     if resp['status'] == 'OK':
         return resp['data']
     else:

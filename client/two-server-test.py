@@ -16,7 +16,6 @@ try:
     print len(chunks_meta), "items stored"
     success = True
     for chunk in chunks_meta:
-        print chunk['digest']
         data = restlib.findvalue(chunk['digest'])
         distrib_data = restlib.findvalue(chunk['digest'], local=False)
         if data != chunk['data']:
