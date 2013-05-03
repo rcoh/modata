@@ -47,7 +47,7 @@ func (bs *BlockServer) IterativeStore (c *web.Context) string {
 
     if exists {
         hashedKey := Hash(key)
-        numreplicated := 0
+        replicated := make([]string, 0)
         nodelist := bs.IterativeFindNode(c, MakeHex(hashedKey))
         result := make(map[string] interface{})
         err := json.Unmarshal([]byte(nodelist), &result)
@@ -60,12 +60,17 @@ func (bs *BlockServer) IterativeStore (c *web.Context) string {
                                                    bs.contact)
                 if (status == OK) {
                     bs.UpdateContact(dcontact)
-                    numreplicated += 1
+                    replicated = append(replicated,
+                                        dcontact.Addr + ":" +
+                                        strconv.Itoa(dcontact.Port))
                 }
             }
             fmt.Println(contactList)
         }
-        return RespondWithData(numreplicated)
+        return RespondWithData(map[string] interface{} {
+            "replication-nodes" : replicated,
+            "replication-count" : len(replicated),
+        })
     } else {
         return RespondWithStatus("FAIL", "NO KEY")
     }
