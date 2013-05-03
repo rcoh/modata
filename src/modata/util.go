@@ -99,7 +99,8 @@ func JsonPost(uri string, data map[string]string, self Contact) (string, interfa
     }
 
     client := &http.Client{}
-    req, _ := http.NewRequest("POST", uri, strings.NewReader(values.Encode()))
+    req, err := http.NewRequest("POST", uri, strings.NewReader(values.Encode()))
+    if (err != nil) { return ERROR, err, dstContact}
 
     req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
     nullID := NodeID{}
