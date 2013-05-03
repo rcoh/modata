@@ -5,13 +5,16 @@ import time
 
 def check_live(port):
     live = False
+    print "Waiting "
     while not live:
         try:
             resp = requests.get("http://localhost:%d/ping" % port)
             print resp
             live = True
         except:
+            print ".",
             time.sleep(.1)
+    print "Done"
 
 def check_dead(port):
     live = True
