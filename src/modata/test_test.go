@@ -58,15 +58,6 @@ func TestBlock(t *testing.T) {
     fmt.Println("... Pass")
 }
 
-func xTestReplication(t *testing.T) {
-    fmt.Println("Test: Initialization of replication service is correct")
-    rs := StartReplicationServer("localhost:8080")
-    rs2 := StartReplicationServer("localhost:8081")
-    fmt.Println(rs)
-    fmt.Println(rs2)
-    time.Sleep(100 * time.Second)
-    fmt.Println("... Pass")
-}
 
 func TestDistance(t *testing.T) {
     fmt.Println("Test: Distance function between Nodes")

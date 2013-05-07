@@ -21,6 +21,9 @@ const (
     ERROR = "ERROR"
 )
 
+type KeyInfo struct {
+    ClosestNodes ContactList
+}
 
 // Contact List, implements sort interface
 

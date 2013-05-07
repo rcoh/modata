@@ -41,7 +41,7 @@ func main() {
     var rs *modata.ReplicationServer
     if (*isReplication) {
         fmt.Println("Starting replication server")
-        rs = modata.StartReplicationServer(*replicationName)
+        rs = modata.StartReplicationServer(*replicationName, bs)
     }
 
     fmt.Println(bs)

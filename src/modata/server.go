@@ -88,16 +88,21 @@ func (bs *BlockServer) FindValue(c *web.Context, key string) string {
 }
 
 //
-// Do a distributed lookup
+// Do a distributed lookup, first does a distributed find node to find places
+// it should query, then either it looks for values and stores any that are
+// missing
 //
 func (bs *BlockServer) IterativeFindValue (c *web.Context, key string) (value string) {
     hashedKey := Hash(key)
     nodelist := bs.IterativeFindNode(c, MakeHex(hashedKey))
     result := make(map[string] interface{})
     err := json.Unmarshal([]byte(nodelist), &result)
+    needToStore := ContactList{}
     if (err == nil) {
         contactList := MakeContactList(result["data"].([]interface{}))
         for _, contact := range contactList {
+            // For each close contact, we should attempt to execute
+            // a find value and get the value
             status, ddata, dcontact := JsonGet(contact.ToHttpAddress() +
             "/find-value/"+key,
             bs.contact)
@@ -105,7 +110,19 @@ func (bs *BlockServer) IterativeFindValue (c *web.Context, key string) (value st
                 bs.UpdateContact(dcontact)
                 value = ddata.(string)
                 break
+            } else if (status == NOTFOUND) {
+                // Node should have the value, we should store it there
+                needToStore = append(needToStore, contact)
             }
+        }
+    }
+    if (value != "") {
+        // Update nodes that should have had the value
+        for _, contact := range needToStore {
+            JsonPostUrl(contact.ToHttpAddress() + "/store?key=" + key +
+                                                   "&data=" + value,
+                                                   bs.contact)
+
         }
     }
     return RespondWithData(value)
