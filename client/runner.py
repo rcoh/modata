@@ -29,14 +29,20 @@ def check_dead(port):
 
 class ServerManager(object):
     servers = {}
-    def async_start_block_server(self, port):
+    def async_start_block_server(self, port, replication_port=None):
         def inline():
             if self.servers:
                 bootstrap = '-bootstrap="localhost:%d"' % self.servers.keys()[0]
             else:
                 bootstrap = ""
 
-            resp = envoy.run('go run ../main.go -block-server="localhost:%d" %s' % (port, bootstrap))
+            if replication_port is None:
+                resp = envoy.run('go run ../main.go -block-server="localhost:%d" %s' % (port, bootstrap))
+            else:
+                resp = envoy.run('go run ../main.go \
+                        -block-server="localhost:%d" %s -replication=true \
+                        -replication-server="localhost:%d"' % (port, bootstrap, replication_port))
+
             print resp.std_out
         p = Process(target=inline)
         p.start()

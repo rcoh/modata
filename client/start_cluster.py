@@ -13,7 +13,7 @@ if __name__ == "__main__":
         manager = ServerManager()
         print "Done with starting manager"
         ports = [1234]
-        manager.async_start_block_server(1234)
+        manager.async_start_block_server(1234, 1337)
         print "Spun up primary"
         for i in range(10):
             manager.async_start_block_server(1235 + i)

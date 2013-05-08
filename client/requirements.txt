@@ -1,3 +1,5 @@
 zfec==1.4.24
 requests==1.1.0
 envoy==0.0.2
+pylzma==0.4.4
+
