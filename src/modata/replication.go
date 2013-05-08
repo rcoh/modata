@@ -20,6 +20,10 @@ func StartReplicationServer(name string, bs *BlockServer) *ReplicationServer{
     go func() {
         // Identifier for this node
 
+        rs.server.Get("/stats/", func (c *web.Context) string {
+            return fmt.Sprintf("%v\n", bs.data)
+        })
+
         fmt.Printf("Listening on %v\n", name)
         rs.server.Run(name)
     }();
