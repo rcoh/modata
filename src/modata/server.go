@@ -8,6 +8,7 @@ import (
     "strings"
     "container/heap"
     "encoding/json"
+    "diskv"
 )
 
 type BlockServer struct {
@@ -16,6 +17,7 @@ type BlockServer struct {
     id NodeID
     server *web.Server
     data map[Key]string
+    fileData *diskv.Diskv
     routingTable *RoutingTable
 
     MyContact Contact
@@ -30,8 +32,9 @@ func (bs *BlockServer) Store (c *web.Context) string {
     // Should verify the key is the hash of the data
 
     if exists {
-        hashedKey := MakeKey(Hash(key))
-        bs.data[hashedKey] = file
+        //hashedKey := MakeKey(Hash(key))
+        bs.fileData.Write(key, MakeByteArray(file))
+        //bs.data[hashedKey] = file
         return RespondOk()
     } else {
         return RespondWithStatus("FAIL", "NO KEY")
@@ -79,10 +82,11 @@ func (bs *BlockServer) IterativeStore (c *web.Context) string {
 
 // Locally find a value
 func (bs *BlockServer) FindValue(c *web.Context, key string) string {
-    hashedKey := MakeKey(Hash(key))
-    value, ok := bs.data[hashedKey]
-    if ok {
-        return RespondWithData(value)
+    //hashedKey := MakeKey(Hash(key))
+    value, ok := bs.fileData.Read(key)
+    //value, ok := bs.data[hashedKey]
+    if ok == nil {
+        return RespondWithData(MakeHex(value))
     }
     return RespondNotFound()
 }
@@ -248,6 +252,13 @@ func StartBlockServer(name string) *BlockServer{
     port, _ := strconv.Atoi(strings.Split(name, ":")[1])
 
     bs.contact = Contact{id, addr, port}
+    flatTransform := func(s string) []string { return []string{} }
+    bs.fileData = diskv.New(diskv.Options{
+        BasePath: name+".dat",
+        Transform: flatTransform,
+        CacheSizeMax: 1024 * 1024,
+    })
+
     bs.data = make(map[Key]string)
     bs.server = web.NewServer()
     bs.routingTable = NewRoutingTable(20, MakeByteSlice(id))
