@@ -31,7 +31,7 @@ func (bs *BlockServer) Store (c *web.Context) string {
 
   if exists {
     //hashedKey := MakeKey(Hash(key))
-    bs.fileData.Write(key, MakeByteArray(file))
+    bs.fileData.Write(key, []byte(file))
     //bs.data[hashedKey] = file
     return RespondOk()
   } else {
@@ -84,7 +84,7 @@ func (bs *BlockServer) FindValue(c *web.Context, key string) string {
   value, ok := bs.fileData.Read(key)
   //value, ok := bs.data[hashedKey]
   if ok == nil {
-    return RespondWithData(MakeHex(value))
+    return RespondWithData(string(value))
   }
   return RespondNotFound()
 }
@@ -111,9 +111,12 @@ func (bs *BlockServer) IterativeFindValue (c *web.Context, key string) (value st
       if (status == OK) {
         bs.UpdateContact(dcontact)
         value = ddata.(string)
-        break
+        if value != "" {
+          break
+        }
       } else if (status == NOTFOUND) {
         // Node should have the value, we should store it there
+        bs.UpdateContact(dcontact)
         needToStore = append(needToStore, contact)
       }
     }
@@ -158,27 +161,22 @@ func (bs *BlockServer) IterativeFindNode (c *web.Context, node string) string {
 
   // Keep track of contacts we need to find
   contacts := bs.routingTable.FindClosest(nodeID, Alpha)
+  numToFind := bs.routingTable.k 
   heap.Init(&contacts)
 
   // Keeps nodes that we are finding
-  results := make(ContactDistanceList, 0, bs.routingTable.k)
+  results := make(ContactDistanceList, 0, bs.routingTable.k * 2)
   heap.Init(&results)
 
   // Have we contacted this node before
   contacted := make(map[ContactDistance]bool)
 
   done := false
-  //var heapLock sync.Mutex
+  var toContact ContactDistanceList
 
   for !done {
-    closest := results.Peek().(ContactDistance)
-
-    for i := 0; i < Alpha; i++ {
-      if (len(contacts) == 0) {
-        // No more nodes to check, we're done
-        done = true
-        break
-      }
+    toContact = ContactDistanceList{}
+    for i := 0; i < Alpha && len(contacts) > 0; i++ {
       contact := heap.Pop(&contacts).(ContactDistance)
       if (contact == ContactDistance{} || contacted[contact]) {
         // Don't contact this node, try another one
@@ -186,6 +184,26 @@ func (bs *BlockServer) IterativeFindNode (c *web.Context, node string) string {
         continue
       }
 
+      status, _, _ := JsonGet(contact.Contact.ToHttpAddress() + "/ping", bs.contact)
+      if (status != OK) {
+        // Node is down, get another one
+        i -= 1
+        continue
+      }
+
+      toContact = append(toContact, contact)
+    }
+
+    if (len(toContact) == 0) {
+      // No more nodes to check, we're done
+      done = true
+      break
+    }
+
+    for _, contact := range toContact {
+      if contacted[contact] {
+        continue
+      }
       fmt.Printf("Making request to %v\n", contact)
       status, data, _ := JsonGet(contact.Contact.ToHttpAddress() +
                                  "/find-node/" +
@@ -194,7 +212,8 @@ func (bs *BlockServer) IterativeFindNode (c *web.Context, node string) string {
       contacted[contact] = true
       if (status == OK) {
         heap.Push(&results, contact)
-        if (len(results) >= bs.routingTable.k) {
+        numToFind = numToFind - 1
+        if (numToFind <= 0) {
           done = true
           break
         }
@@ -208,19 +227,11 @@ func (bs *BlockServer) IterativeFindNode (c *web.Context, node string) string {
         // Handle removing bad nodes
       }
     }
-
-    candidate := contacts.Peek().(ContactDistance)
-    if ((candidate != ContactDistance{}) &&
-    !((&(candidate.Distance)).LessThan(&(closest.Distance)))) {
-      fmt.Println(len(contacts))
-      done = true
-      fmt.Println("Didn't find anything closer, done")
-    }
   }
 
   fmt.Printf("Results: %v\n", results)
 
-  result := make(ContactList, bs.routingTable.k)
+  result := make(ContactList, bs.routingTable.k * 2)
   contact := ContactDistance{}
   last := 0
   fmt.Println(nodeID)

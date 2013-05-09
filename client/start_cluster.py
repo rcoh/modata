@@ -1,6 +1,8 @@
 from runner import ServerManager
 import time
 
+NUMSERVERS = 25
+
 def help():
     result =  " show_servers      | ss         Show available servers\n"
     result += " bring_up [port]   | bu [port]  Bring up a server\n"
@@ -15,7 +17,8 @@ if __name__ == "__main__":
         ports = [1234]
         manager.async_start_block_server(1234, 1337)
         print "Spun up primary"
-        for i in range(10):
+
+        for i in range(NUMSERVERS):
             manager.async_start_block_server(1235 + i)
             ports.append(1235 + i)
 
