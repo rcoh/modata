@@ -106,17 +106,17 @@ chunks client-side.
 The most challenging part of this project was getting a functional kademlia 
 based DHT and building additional availability guarantees into the system.
 
-Because we are assuming that the target consumer will be a laptop, we chose 
-usage analysis of wifi networks as the starting point for availability analysis.
-In particular, we assume that most wifi users behave in similar fashions to 
-that of the Mountain View wide wifi provided by Google \cite{wifi}.  Using 
-these assumptions, we can do a quick back of the envelope calculation for data 
-loss. Assuming that we republish keys every hour, we only have to care about 
-losing data in a given hourly period, since at the end of that period we will 
-re-replicate the key.  We can choose the replication factor of Kademlia to trade 
-off bandwidth with availability, and a commonly chosen value is 20.  Due to 
-consistent hashing, we can say that node failures are independent, and that the 
-probability of a given node failure is equal to the probability of failure 
+Because we are assuming that the target consumer will be using laptops, we 
+chose usage analysis of wifi networks as the starting point for availability 
+analysis. In particular, we assume that most wifi users behave in similar 
+fashions to that of the Mountain View wide wifi provided by Google \cite{wifi}.  
+Using these assumptions, we can do a quick back of the envelope calculation for 
+data loss. Assuming that we republish keys every hour, we only have to care 
+about losing data in a given hourly period, since at the end of that period we 
+will re-replicate the key.  We can choose the replication factor of Kademlia to 
+trade off bandwidth with availability, and a commonly chosen value is 20.  Due 
+to consistent hashing, we can say that node failures are independent, and that 
+the probability of a given node failure is equal to the probability of failure 
 conditioned on the node type.  Node type is split into long lived, which are on 
 all day, medium lived which are on for between 100 and 1000 minutes, and short 
 lived which are on for less than an hour.  
@@ -135,8 +135,10 @@ Pr(failure | short\_lived)*Pr(short\_lived)
 We can estimate the duration probabilities from the Wifi paper Figure 8 
 \cite{wifi} and to be as conservative as possible we say that $Pr(failure)=1$ 
 for all types except long lived, for which $Pr(failure)=0$, this yields 
-$Pr(single\_failure)=.8$, and $Pr(lose\_key)=0.01$.  Due to erasure coding, the 
-probability of losing a file with N chunks is $Pr(lose\_key)^{\frac{N}{2}}$.  
+$Pr(single\_failure)= 0*.2 + 1*.6 + 1*.2 = .8$, and 
+therefore $Pr(lose\_key) \approx 0.01$.  Due to erasure coding with code rate 
+of 1/2, the probability of losing a file with N chunks is 
+$Pr(lose\_key)^{\frac{N}{2}}$. 
 This means that to lose a 1 Megabyte file, one must lose 125 keys (assuming a 
 4kb chunk size). Losing access to a file therefore has probability 
 $Pr(data\_loss) \approx 5*10^{-243} \approx 0$.  Even if access is lost due to 
