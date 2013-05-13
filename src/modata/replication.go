@@ -60,7 +60,7 @@ func (rs *ReplicationServer) IntelligentReplication () {
 
   max := 3
   for _, value := range replicationCounts {
-    if value >= rs.blockServer.routingTable.k {
+    if value >= rs.blockServer.routingTable.k - 1 {
       // Don't replicate fully replicated nodes
       break
     }
