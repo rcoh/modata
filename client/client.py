@@ -8,6 +8,7 @@ parser = argparse.ArgumentParser(description='modataclient')
 parser.add_argument('--keyfile', dest='keyfile')
 parser.add_argument('--upload', dest='upload')
 parser.add_argument('--download', dest='download')
+parser.add_argument('--output', dest='output')
 
 args = parser.parse_args()
 
@@ -30,7 +31,12 @@ if args.download:
     if not args.download in keyfile:
         print "Unknown file. Exiting"
         sys.exit(1)
-    file_metadata = keyfile[args.download]
-    data = coding.get_chunks(file_metadata)
-    print data
+    if not args.output:
+        print "Please supply a destination file for writing"
+    else:
+        file_metadata = keyfile[args.download]
+        data = coding.get_chunks(file_metadata)
+        output_file = open(args.output, "w")
+        output_file.write(data)
+        output_file.close()
 
