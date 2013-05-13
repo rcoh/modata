@@ -48,8 +48,9 @@ file interface as well as additional redundancy.
 
 \subsection{Server - Kademlia DHT}
 The server implements the standard Kademlia Distributed Hash Table algorithm 
-\cite{kademlia}.  Kademlia can automatically handle nodes joining, leaving and 
-publishing key/value pairs to the network.  The algorithm is fundamentally peer 
+\cite{kademlia}\cite{xlattice}.  Kademlia can automatically handle nodes 
+joining, leaving and publishing key/value pairs to the network.  The algorithm 
+is fundamentally peer 
 to peer, and nodes join by bootstrapping in on old nodes.  Each node is given 
 an identifier, and then consistent hashing based on the XOR metric is used to 
 evenly distribute keys among available nodes.  All keys and node-ids are 160 
