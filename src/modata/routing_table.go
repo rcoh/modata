@@ -208,3 +208,20 @@ func (rt *RoutingTable) FindClosest(k NodeID, alpha int) (ContactDistanceList) {
 
   return shortlist[:alpha]
 }
+
+func (rt *RoutingTable) AllContacts() (ContactList) {
+  contacts := make(map[Contact]bool)
+  for _, bucket := range rt.buckets {
+    for e := bucket.Front(); e != nil; e = e.Next() {
+      value := e.Value.(Contact)
+      contacts[value] = true
+    }
+  }
+
+  all_contacts := make(ContactList, 0)
+  for k, _ := range contacts {
+    all_contacts = append(all_contacts, k)
+  }
+
+  return all_contacts
+}

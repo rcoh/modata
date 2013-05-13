@@ -9,6 +9,7 @@ import (
   "container/heap"
   "encoding/json"
   "diskv"
+  "io/ioutil"
 )
 
 type BlockServer struct {
@@ -260,14 +261,25 @@ func StartBlockServer(name string) *BlockServer{
   bs := new(BlockServer)
 
   // Node id for kademlia
-  id := MakeNode(MakeGUID())
+  var id NodeID
+
+  content, err := ioutil.ReadFile(name + ".id")
+  if err == nil {
+    id = MakeNode(content)
+    //Do something
+  } else {
+    b := MakeGUID()
+    id = MakeNode(b)
+    ioutil.WriteFile(name + ".id", b, 0644)
+  }
+
   addr := strings.Split(name, ":")[0]
   port, _ := strconv.Atoi(strings.Split(name, ":")[1])
 
   bs.contact = Contact{id, addr, port}
   flatTransform := func(s string) []string { return []string{} }
   bs.fileData = diskv.New(diskv.Options{
-    BasePath: name+".dat",
+    BasePath: name + ".dat",
     Transform: flatTransform,
     CacheSizeMax: 1024 * 1024,
   })
@@ -330,6 +342,16 @@ func StartBlockServer(name string) *BlockServer{
       bs.updateContactFromHeader(c)
       bs.prepareResponse(c)
       return RespondOk()
+    })
+
+    // For the status board
+    bs.server.Get("/keys", func (c *web.Context) string {
+      c.ContentType("json")
+      keys := make([]string, 0)
+      for key := range bs.fileData.Keys() {
+        keys = append(keys, key)
+      }
+      return RespondWithData(keys)
     })
 
     fmt.Printf("Listening on %v\n", name)

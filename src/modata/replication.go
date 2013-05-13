@@ -1,33 +1,85 @@
 package modata
 
 import (
-    "fmt"
-    "web"
+  "fmt"
+  "web"
+  "sort"
 )
 
 type ReplicationServer struct {
-    MyContact Contact
+  MyContact Contact
 
-    server *web.Server
-    blockServer *BlockServer
+  server *web.Server
+  blockServer *BlockServer
+}
+
+func (rs *ReplicationServer) BuildKeyMap (c *web.Context) string{
+  contacts := rs.blockServer.routingTable.AllContacts()
+  contacts = append(contacts, rs.blockServer.contact)
+  keyMapping := make(map[string][]string)
+  for _, contact := range contacts {
+    status, data, _ := JsonGet(contact.ToHttpAddress() + "/keys", Contact{})
+    if (status == OK) {
+      for _, key := range data.([]interface{}) {
+        skey := key.(string)
+        lst, ok := keyMapping[skey]
+        if ok {
+          keyMapping[skey] = append(lst, contact.ToHttpAddress())
+        } else {
+          keyMapping[skey] = []string{contact.ToHttpAddress()}
+        }
+      }
+    } else {
+      fmt.Printf("Failed to get keys stored on %v\n", contact)
+      fmt.Printf("Attempted to hit %v\n", contact.ToHttpAddress() + "/keys")
+      fmt.Println(data)
+      fmt.Println(status)
+    }
+  }
+
+  finalData := make(map[string]interface{})
+  finalData["stats"] = map[string]int{"numKeys": len(keyMapping), "contacts": len(contacts),
+                        "averageKeysPerContact": len(keyMapping) /
+                        len(contacts)}
+  finalData["keys"] = make(map[string]interface{})
+  for key, value := range keyMapping {
+    sort.Strings(value)
+    finalData["keys"].(map[string]interface{})[key] = make(map[string]interface{})
+    finalData["keys"].(map[string]interface{})[key].(map[string]interface{})["replicationCount"] = len(value)
+    finalData["keys"].(map[string]interface{})[key].(map[string]interface{})["nodes"] = value
+  }
+  return RespondWithData(finalData)
 }
 
 func StartReplicationServer(name string, bs *BlockServer) *ReplicationServer{
-    rs := new(ReplicationServer)
+  rs := new(ReplicationServer)
 
-    rs.server = web.NewServer()
+  rs.server = web.NewServer()
+  rs.blockServer = bs
 
-    go func() {
-        // Identifier for this node
+  go func() {
+    // Identifier for this node
 
-        rs.server.Get("/stats/", func (c *web.Context) string {
-            return fmt.Sprintf("%v\n", bs.data)
-        })
+    rs.server.Get("/contacts", func (c *web.Context) string {
+      c.ContentType("json")
+      return RespondWithData(bs.routingTable.AllContacts())
+    })
 
-        fmt.Printf("Listening on %v\n", name)
-        rs.server.Run(name)
-    }();
+    rs.server.Get("/keymap", func (c *web.Context) string {
+      c.ContentType("json")
+      return rs.BuildKeyMap(c)
+    })
 
-    return rs
+    fmt.Printf("Listening on %v\n", name)
+    rs.server.Run(name)
+  }();
+
+  // create a thread to call tick() periodically
+  /*
+  go func() {
+  }()
+*/
+
+  return rs
 }
 
