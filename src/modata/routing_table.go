@@ -124,6 +124,16 @@ func (rt *RoutingTable) Init() {
   }
 }
 
+func (rt *RoutingTable) Remove(c Contact) {
+  bucket := &rt.buckets[rt.BucketForNode(c.ID)]
+  for e := bucket.Front(); e != nil; e = e.Next() {
+    if e.Value == c {
+      bucket.Remove(e)
+      break
+    }
+  }
+}
+
 func (rt *RoutingTable) BucketForNode(n NodeID) (i int) {
   for i := 0; i < (IDLength * 8); i++ {
     // Are the ith bits set?

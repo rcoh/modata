@@ -4,7 +4,10 @@ import (
   "fmt"
   "web"
   "sort"
+  "time"
 )
+
+const REPL_INTERVAL = 10 * time.Second
 
 type ReplicationServer struct {
   MyContact Contact
@@ -27,14 +30,53 @@ func BuildKeyMap(contacts ContactList) map[string][]string {
           keyMapping[skey] = []string{contact.ToHttpAddress()}
         }
       }
-    } else {
-      fmt.Printf("Failed to get keys stored on %v\n", contact)
-      fmt.Printf("Attempted to hit %v\n", contact.ToHttpAddress() + "/keys")
-      fmt.Println(data)
-      fmt.Println(status)
     }
   }
   return keyMapping
+}
+
+func (rs *ReplicationServer) IntelligentReplication () {
+  contacts := rs.blockServer.routingTable.AllContacts()
+  contacts = append(contacts, rs.blockServer.contact)
+  keyMapping := BuildKeyMap(contacts)
+
+  // Stores repl_count -> keys 
+  replicationMap := make(map[int][]string)
+  for key, value := range keyMapping {
+    replicationCount := len(value)
+    lst, ok := replicationMap[replicationCount]
+    if ok {
+      replicationMap[replicationCount] = append(lst, key)
+    } else {
+      replicationMap[replicationCount] = []string{key}
+    }
+  }
+
+  replicationCounts := make([]int,0)
+  for key, _ := range replicationMap {
+    replicationCounts = append(replicationCounts, key)
+  }
+  sort.Ints(replicationCounts)
+
+  max := 3
+  for _, value := range replicationCounts {
+    if value >= rs.blockServer.routingTable.k {
+      // Don't replicate fully replicated nodes
+      break
+    }
+    keysToReplicate := replicationMap[value]
+    for _, key := range keysToReplicate {
+      fmt.Printf("Re-replicating %v with replication %v\n", key, value)
+      server := keyMapping[key][0]
+      JsonPostUrl(server + "/replicate?key=" + key, Contact{})
+    }
+    max -= 1
+    if (max <= 0) {
+      break
+    }
+  }
+
+
 }
 
 func (rs *ReplicationServer) KeyMap(c *web.Context) string{
@@ -78,11 +120,14 @@ func StartReplicationServer(name string, bs *BlockServer) *ReplicationServer{
     rs.server.Run(name)
   }();
 
-  // create a thread to call tick() periodically
-  /*
+  // create a thread to do intelligent replication every now and again
   go func() {
+    time.Sleep(10 * time.Second)
+    for {
+      rs.IntelligentReplication()
+      time.Sleep(REPL_INTERVAL)
+    }
   }()
-*/
 
   return rs
 }
