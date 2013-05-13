@@ -115,7 +115,8 @@ def get_metadata(k, m, chunk_dicts):
 def get_data(digest):
     try:
         return restlib.findvalue(digest, local=False)
-    except:
+    except Exception as e:
+        print e
         return None
 
 def data_for_superblock(metadata):

@@ -1,7 +1,7 @@
 import socket
 
 SERVER = "localhost"
-USE_EXTERNAL = True
+USE_EXTERNAL = False
 
 # Taken from
 # http://stackoverflow.com/questions/2311510/python-getting-a-machines-external-ip-address

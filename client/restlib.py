@@ -15,11 +15,17 @@ def findvalue(digest, local=True, server=SERVER):
         dist = "distributed/"
     else:
         dist = ""
-    resp = requests.get(server + dist + "find-value/" + digest).json()
-    if resp['status'] == 'OK':
-        return resp['data']
-    else:
+    resp = requests.get(server + dist + "find-value/" + digest)
+    try:
+        data = requests.get(server + dist + "find-value/" + digest).json()
+        if data['status'] == 'OK':
+            return data['data']
+        else:
+            return None
+    except:
+        print resp.text
         return None
+
 
 def digest_for_chunk(chunk):
     return hashlib.sha1(chunk).hexdigest()
