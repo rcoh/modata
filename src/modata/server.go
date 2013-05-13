@@ -32,8 +32,6 @@ type BlockServer struct {
 // Store a key,value pair locally
 //
 func (bs *BlockServer) Store (c *web.Context) string {
-  bs.mu.Lock()
-  defer bs.mu.Unlock()
   key, exists := c.Params["key"]
   file, _ := c.Params["data"]
   // Should verify the key is the hash of the data
@@ -91,8 +89,6 @@ func (bs *BlockServer) IterativeStore (c *web.Context) string {
 
 // Locally find a value
 func (bs *BlockServer) FindValue(c *web.Context, key string) string {
-  bs.mu.Lock()
-  defer bs.mu.Unlock()
 
   //hashedKey := MakeKey(Hash(key))
   value, ok := bs.fileData.Read(key)
