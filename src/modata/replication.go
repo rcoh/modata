@@ -5,6 +5,7 @@ import (
   "web"
   "sort"
   "time"
+  "io/ioutil"
 )
 
 const REPL_INTERVAL = 10 * time.Second
@@ -108,12 +109,20 @@ func StartReplicationServer(name string, bs *BlockServer) *ReplicationServer{
 
     rs.server.Get("/contacts", func (c *web.Context) string {
       c.ContentType("json")
+      c.ResponseWriter.Header().Add("Access-Control-Allow-Origin", "*")
       return RespondWithData(bs.routingTable.AllContacts())
     })
 
     rs.server.Get("/keymap", func (c *web.Context) string {
       c.ContentType("json")
+      c.ResponseWriter.Header().Add("Access-Control-Allow-Origin", "*")
       return rs.KeyMap(c)
+    })
+
+    rs.server.Get("/", func(c *web.Context) string {
+      c.ContentType("text/html")
+      b, _ := ioutil.ReadFile("../viz/viz.html")
+      return string(b)
     })
 
     fmt.Printf("Listening on %v\n", name)

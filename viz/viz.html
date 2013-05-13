@@ -1,0 +1,329 @@
+<!doctype html>
+<head>
+	<title>modata network visualization</title>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+	<style>
+
+	body {
+		font-size: 8pt;
+		font-family: "Menlo", monospace;
+	}
+
+	ul {
+		padding: 2px;
+	}
+
+	#contacts {
+		width: 140px;
+		height: 480px;
+		overflow: scroll;
+		text-align: center;
+		position: absolute;
+	}
+
+	#contacts ul li {
+		list-style-type: none;
+		font-size: 10pt;
+		line-height: 1.2em;
+	}
+
+	#contacts ul li:hover {
+		background: #eee;
+	}
+
+	#keys {
+		text-align: center;
+		width: 350px;
+		height: 480px;
+		overflow: scroll;
+		position: absolute;
+		right: 10px;
+	}
+
+	#keys ul li {
+		list-style-type: none;
+		line-height: 1.5em;
+		display: block;
+	}
+
+	#keys ul li:hover {
+		background: #eee;
+	}
+
+	svg {
+		width: 100%;
+		border: 1px solid #000;
+	}
+
+	.node {
+	  stroke: #fff;
+	  stroke-width: 1.5px;
+	}
+
+	.node:after {
+		content: attr(data-label);
+		display: block;
+		color: black;
+	}
+
+	.link {
+	  stroke: #999;
+	  stroke-opacity: .6;
+	}
+
+	</style>
+
+	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+	<script>
+
+var statserver = "";
+
+var cap = 2;
+
+function getContacts(f) {
+	$.getJSON(statserver + "/contacts", {}, function(data, textStatus, jqXHR) {
+		
+		data.data.sort(function(na, nb) {
+			if (na.Addr < nb.Addr) {
+				return -1
+			} else if (nb.Addr > na.Addr) {
+				return 1
+			} else {
+				return nb.Port - na.Port
+			}
+		});
+
+		var nodeList = data.data;
+		var connections = [];
+
+		function findNode(n) {
+			for (var i = 0; i < nodeList.length; i++) {
+				if (nodeList[i].Addr == n.Addr && nodeList[i].Port == n.Port) {
+					return i;
+				}
+			}
+			nodeList.push(n);
+			return nodeList.length - 1;
+		}
+
+
+		var l = nodeList.length;	// May increase as we find more nodes, don't want to scan the new ones
+		var done = 0;
+		var i = 0;
+		nodeList.map(function(n) {
+			var addr = "http://" + nodeList[i].Addr + ":" + (parseInt(nodeList[i].Port) + (1337 - 1234));
+			i++;
+			// Replication server port for blockserver
+
+			$.getJSON(addr + "/contacts", {}, function(data, textStatus, jqXHR) {
+				var contacts = data.data;
+				contacts.map(function(e) {
+					var i = findNode(n);
+					var j = findNode(e);
+					connections.push({source: i, target: j});
+				});
+
+				if (++done == l || done == cap) {
+					cap++;
+					done = l+1
+					f(nodeList, connections);
+					return
+				}
+			}).fail(function(data, textStatus, jqXHR) {
+				if (++done == l || done == cap) {
+					cap++
+					done = l+1
+					f(nodeList, connections);
+					return
+				}
+			});
+		});
+	});
+}
+
+function getKeys(f) {
+	$.getJSON(statserver + "/keymap", {}, function(data, textStatus, jqXHR) {
+		keys = Object.keys(data.data.keys).map(function(k) { return {key: k, nodes: data.data.keys[k].nodes, replicationCount: data.data.keys[k].replicationCount }});
+
+		// Also update stats
+		var nc = data.data.stats.contacts;
+		var nk = data.data.stats.numKeys;
+		$("#footer").html(nk + " keys, " + nc + " contacts <span style='float: right'>6.824 Spring 2013 &mdash; Merritt Boyd, Russell Cohen, Joseph Lynch")
+
+		f(keys);
+	}).fail(function(data, status, xhr) {
+		console.log("fail: " + data + ":" + status);
+	});
+}
+
+function plotContacts(nodes, links) {
+	// Adapted from D3 example code: http://bl.ocks.org/mbostock/4062045
+	var width = 700,
+	    height = 500;
+
+	var color = d3.scale.category20();
+
+	var force = d3.layout.force()
+	    .charge(-120)
+	    .linkDistance(120)
+	    .size([width, height]);
+
+	var svg = d3.select("#viz").append("svg")
+	    .attr("width", width)
+	    .attr("height", height);
+
+	force
+	  .nodes(nodes)
+	  .links(links)
+
+	function updateContacts(newnodes, newlinks) {
+
+		var nodes = force.nodes();
+		var links = force.links();
+
+		newnodes.map(function(nn) {
+			if (! $.grep(nodes, function(n) { return nn.Addr == n.Addr && nn.Port == n.Port})) {
+				nodes.push(nn);
+			}
+		});
+
+		newlinks.map(function(nl) {
+			if (! $.grep(links, function(l) { return l.source == nl.source && l.target == nl.target})) {
+				links.push(nl);
+			}
+		});
+
+		var link = svg.selectAll(".link")
+		  .data(force.links());
+
+		link.enter().append("line")
+		  .attr("class", "link")
+		  .style("stroke-width", "1px");
+
+		link.exit().remove();
+
+		var node = svg.selectAll(".node")
+		  .data(force.nodes());
+
+		node.enter().append("circle")
+		  .attr("class", "node")
+		  .attr("r", 8)
+		  .attr("data-label", function(d) { return d.Port })
+	  	  .style("fill", function(d) { return color(d.Addr + ":" + d.Port); })
+		  .call(force.drag);
+
+		node.exit().remove();
+
+		// node.append("title")
+		//   .text(function(d) { return d.Addr + ":" + d.Port; });
+
+		force.on("tick", function() {
+		link.attr("x1", function(d) { return d.source.x; })
+		    .attr("y1", function(d) { return d.source.y; })
+		    .attr("x2", function(d) { return d.target.x; })
+		    .attr("y2", function(d) { return d.target.y; });
+
+		node.attr("cx", function(d) { return d.x; })
+		    .attr("cy", function(d) { return d.y; });
+		});
+
+		force.start();
+	}
+
+	updateContacts(nodes, links);
+
+	setInterval(function() {
+		getContacts(updateContacts);
+	}, 1000);
+
+	// Make legend
+	var nodeTable = d3.select("#contacts").append("ul");
+	var nodeLis = nodeTable.selectAll(".nodeLegend")
+	  .data(nodes)
+	  .enter().append("li")
+	    .text(function(n) { return n.Addr + ":" + n.Port; })
+	    .style("color", function(n) { return color(n.Addr + ":" + n.Port); })
+
+	    .on("mouseenter", function(n) {
+	    	svg.selectAll(".node").filter(function(no) { return (no.Addr == n.Addr && n.Port == no.Port) })
+	    	  .style("stroke", "black")
+	    	  .style("stroke-width", "2px")
+	    })
+
+	    .on("mouseleave", function(n) {
+	    	svg.selectAll(".node").style("stroke-width", "0")
+	    })
+
+	// Do shit with keys
+	var keyTable = d3.select("#keys").append("ul");
+
+	function updateKeys(data) {
+		var keyLis = keyTable.selectAll("li")
+		  .data(data);
+
+		keyLis.enter().append("li")
+		    .text(function(k) { return k.key + " (" + k.replicationCount + ")" })
+		    .style("color", "black")
+		    .on("mouseenter", function(k) {
+		    	svg.selectAll(".node").filter(function(n) { 
+		    		var addr = "http://" + n.Addr + ":" + n.Port;
+		    		for (var i = 0; i < k.nodes.length; i++) {
+		    			if (k.nodes[i] == addr) {
+		    				return true;
+		    			}
+		    		}
+		    		return false;
+		    	})
+		    	  .style("fill", "red")
+		    	  .style("stroke", "black")
+		    	  .style("stroke-width", "2px")
+		    })
+		    
+		    .on("mouseleave", function(k, i) {
+		    	svg.selectAll(".node").filter(function(n) { 
+		    		var addr = "http://" + n.Addr + ":" + n.Port;
+		    		for (var i = 0; i < k.nodes.length; i++) {
+		    			if (k.nodes[i] == addr) {
+		    				return true;
+		    			}
+		    		}
+		    		return false;
+		    	})
+		    	  .style("fill", function(d) { return color(d.Addr + ":" + d.Port); })
+		    	  .style("stroke-width", "0")
+		    });
+
+		keyLis.exit().remove();
+	}
+
+	getKeys(function(keys) {
+		updateKeys(keys);
+
+	    setInterval(function() {
+	    	getKeys(function(keys) {
+	    		updateKeys(keys);
+	    	});
+	    }, 1000);
+	});
+}
+
+window.onload = function() {
+	getContacts(plotContacts);
+}
+
+	</script>
+</head>
+<body>
+
+	<h2>modata network visualization</h2>
+
+	<div id="contacts"></div>
+	<div id="keys"></div>
+
+	<div id="viz"></div>
+
+	<div id="footer"></div>
+
+</body>
+</html>
