@@ -1,5 +1,7 @@
 from flask import Flask
 from flask import request
+import requests
+import coding
 app = Flask(__name__)
 
 page = """
@@ -21,8 +23,10 @@ def hello():
 
 @app.route("/upload", methods=['POST'])
 def posted():
-    print "file uploaded at: ", request.form['fileurl']
-    return "got your file"
+    fileurl = request.form['fileurl']
+    data = requests.get(fileurl).text
+    metadata = coding.send_chunks_get_metadata(data)
+    return "got your file. Metadata: " + str(metadata)
 
 
 if __name__ == "__main__":
