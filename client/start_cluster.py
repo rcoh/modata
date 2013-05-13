@@ -1,7 +1,7 @@
 from runner import ServerManager
 import time
 
-NUMSERVERS = 25
+NUMSERVERS = 10
 
 def help():
     result =  " show_servers      | ss         Show available servers\n"

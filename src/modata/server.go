@@ -20,6 +20,12 @@ type BlockServer struct {
   data map[Key]string
   fileData *diskv.Diskv
   routingTable *RoutingTable
+
+  // Constants, tweak these around
+  tExpire int
+  tRefresh int
+  tReplicate int
+  tRepublish int
 }
 
 //
@@ -46,8 +52,8 @@ func (bs *BlockServer) Store (c *web.Context) string {
 //
 func (bs *BlockServer) IterativeStore (c *web.Context) string {
   key, exists := c.Params["key"]
-
   if exists {
+
     hashedKey := Hash(key)
     replicated := make([]string, 0)
     nodelist := bs.IterativeFindNode(c, MakeHex(hashedKey))
@@ -65,6 +71,8 @@ func (bs *BlockServer) IterativeStore (c *web.Context) string {
           replicated = append(replicated,
           dcontact.Addr + ":" +
           strconv.Itoa(dcontact.Port))
+        } else {
+          bs.routingTable.Remove(dcontact)
         }
       }
       fmt.Println(contactList)
@@ -119,6 +127,8 @@ func (bs *BlockServer) IterativeFindValue (c *web.Context, key string) (value st
         // Node should have the value, we should store it there
         bs.UpdateContact(dcontact)
         needToStore = append(needToStore, contact)
+      } else {
+        bs.routingTable.Remove(dcontact)
       }
     }
   }
@@ -147,6 +157,16 @@ func (bs *BlockServer) FindNode(c *web.Context, node string) string {
     return RespondWithStatus("NOTOK", "Invalid node identifier")
   }
   results := bs.routingTable.FindClosest(MakeNodeID(node), bs.routingTable.k)
+  // Ping the contacts we're about to send, and remove any dead ones from our
+  // routing table
+  // TODO: TAKE THIS OUT once we have a big enough network to rely on nodes
+  // taking over other dead nodes
+  for _, contact := range results {
+    status, _, _ := JsonGet(contact.Contact.ToHttpAddress() + "/ping", bs.contact)
+    if (status != OK) {
+      bs.routingTable.Remove(contact.Contact)
+    }
+  }
   return RespondWithData(results)
 }
 
@@ -187,8 +207,10 @@ func (bs *BlockServer) IterativeFindNode (c *web.Context, node string) string {
 
       status, _, _ := JsonGet(contact.Contact.ToHttpAddress() + "/ping", bs.contact)
       if (status != OK) {
-        // Node is down, get another one
+        // Node is down, get another one, also remove it from the contact
+        // list
         i -= 1
+        bs.routingTable.Remove(contact.Contact)
         continue
       }
 
@@ -286,7 +308,7 @@ func StartBlockServer(name string) *BlockServer{
 
   bs.data = make(map[Key]string)
   bs.server = web.NewServer()
-  bs.routingTable = NewRoutingTable(20, MakeByteSlice(id))
+  bs.routingTable = NewRoutingTable(5, MakeByteSlice(id))
 
   go func() {
     // Primitive store, stores the key,value in the local data
@@ -344,7 +366,7 @@ func StartBlockServer(name string) *BlockServer{
       return RespondOk()
     })
 
-    // For the status board
+    // Following are for the replication server to do smart things
     bs.server.Get("/keys", func (c *web.Context) string {
       c.ContentType("json")
       keys := make([]string, 0)
@@ -352,6 +374,18 @@ func StartBlockServer(name string) *BlockServer{
         keys = append(keys, key)
       }
       return RespondWithData(keys)
+    })
+
+    // Re-replicates a key that this node has
+    bs.server.Post("/replicate", func (c *web.Context) string {
+      c.ContentType("json")
+      key := c.Params["key"]
+      value, ok := bs.fileData.Read(key)
+      if ok == nil {
+        c.Params["data"] = string(value)
+        return bs.IterativeStore(c)
+      }
+      return RespondNotFound()
     })
 
     fmt.Printf("Listening on %v\n", name)
