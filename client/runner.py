@@ -2,13 +2,16 @@ import envoy
 import requests
 from multiprocessing import Process
 import time
+import server_config
+
+SERVER = server_config.SERVER
 
 def check_live(port):
     live = False
     print "Waiting "
     while not live:
         try:
-            resp = requests.get("http://localhost:%d/ping" % port)
+            resp = requests.get("http://%s:%d/ping" % (SERVER, port))
             print resp
             live = True
         except:
@@ -20,7 +23,7 @@ def check_dead(port):
     live = True
     while live:
         try:
-            requests.get("http://localhost:%d/ping" % port)
+            requests.get("http://%s:%d/ping" %(SERVER, port))
             time.sleep(.1)
         except:
             live = False
@@ -32,16 +35,16 @@ class ServerManager(object):
     def async_start_block_server(self, port, replication_port=None):
         def inline():
             if self.servers:
-                bootstrap = '-bootstrap="localhost:%d"' % self.servers.keys()[0]
+                bootstrap = '-bootstrap="%s:%d"' % (SERVER, self.servers.keys()[0])
             else:
                 bootstrap = ""
 
             if replication_port is None:
-                resp = envoy.run('go run ../main.go -block-server="localhost:%d" %s' % (port, bootstrap))
+                resp = envoy.run('go run ../main.go -block-server="%s:%d" %s' % (server, port, bootstrap))
             else:
                 resp = envoy.run('go run ../main.go \
-                        -block-server="localhost:%d" %s -replication=true \
-                        -replication-server="localhost:%d"' % (port, bootstrap, replication_port))
+                        -block-server="%s:%d" %s -replication=true \
+                        -replication-server="%s:%d"' % (SERVER, port, bootstrap, SERVER, replication_port))
 
             print resp.std_out
         p = Process(target=inline)

@@ -1,6 +1,8 @@
 import requests
 import hashlib
-SERVER = "http://localhost:1234/"
+import server_config
+
+SERVER = "http://" + server_config.SERVER + ":1234/"
 def store(chunk, digest, local=True, server=SERVER):
     if not local:
         dist = "distributed/"
