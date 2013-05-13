@@ -13,9 +13,7 @@ type ReplicationServer struct {
   blockServer *BlockServer
 }
 
-func (rs *ReplicationServer) BuildKeyMap (c *web.Context) string{
-  contacts := rs.blockServer.routingTable.AllContacts()
-  contacts = append(contacts, rs.blockServer.contact)
+func BuildKeyMap(contacts ContactList) map[string][]string {
   keyMapping := make(map[string][]string)
   for _, contact := range contacts {
     status, data, _ := JsonGet(contact.ToHttpAddress() + "/keys", Contact{})
@@ -36,7 +34,13 @@ func (rs *ReplicationServer) BuildKeyMap (c *web.Context) string{
       fmt.Println(status)
     }
   }
+  return keyMapping
+}
 
+func (rs *ReplicationServer) KeyMap(c *web.Context) string{
+  contacts := rs.blockServer.routingTable.AllContacts()
+  contacts = append(contacts, rs.blockServer.contact)
+  keyMapping := BuildKeyMap(contacts)
   finalData := make(map[string]interface{})
   finalData["stats"] = map[string]int{"numKeys": len(keyMapping), "contacts": len(contacts),
                         "averageKeysPerContact": len(keyMapping) /
@@ -67,7 +71,7 @@ func StartReplicationServer(name string, bs *BlockServer) *ReplicationServer{
 
     rs.server.Get("/keymap", func (c *web.Context) string {
       c.ContentType("json")
-      return rs.BuildKeyMap(c)
+      return rs.KeyMap(c)
     })
 
     fmt.Printf("Listening on %v\n", name)

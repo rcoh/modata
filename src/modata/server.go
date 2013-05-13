@@ -20,6 +20,12 @@ type BlockServer struct {
   data map[Key]string
   fileData *diskv.Diskv
   routingTable *RoutingTable
+
+  // Constants, tweak these around
+  tExpire int
+  tRefresh int
+  tReplicate int
+  tRepublish int
 }
 
 //
@@ -46,8 +52,8 @@ func (bs *BlockServer) Store (c *web.Context) string {
 //
 func (bs *BlockServer) IterativeStore (c *web.Context) string {
   key, exists := c.Params["key"]
-
   if exists {
+
     hashedKey := Hash(key)
     replicated := make([]string, 0)
     nodelist := bs.IterativeFindNode(c, MakeHex(hashedKey))
