@@ -1,13 +1,13 @@
 from flask import Flask
-from flask import request
+from flask import request, send_file
 import json
-import requests
 import coding
 import time
 from server_config import SERVER
 import keyfilelib
-from multiprocessing import Pool, Queue, Pipe, Process
+from multiprocessing import Queue, Pipe, Process
 from werkzeug import secure_filename
+from cStringIO import StringIO
 
 
 app = Flask(__name__)
@@ -105,6 +105,15 @@ def posted():
     <p><a href="/">Watch Progress</a></p>
     """
 
+@app.route("/download/<filename>", methods=['GET'])
+def download(filename):
+    with open(keyfile_name, 'r') as keyfile_handle:
+        keyfile = json.loads(keyfile_handle.read())
+    metadata = keyfile[filename]
+    data = StringIO(coding.get_chunks(metadata))
+
+    return send_file(data)
+
 
 def consume(input_queue, done_jobs, length_pipe, name_pipe, keyfile_name):
     while True:
@@ -123,6 +132,8 @@ def consume(input_queue, done_jobs, length_pipe, name_pipe, keyfile_name):
             print "Done saving to keyfile"
         except Queue.Empty:
             time.sleep(1)
+
+
 
 
 if __name__ == "__main__":
