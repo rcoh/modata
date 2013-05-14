@@ -133,4 +133,4 @@ if __name__ == "__main__":
     consumer = Process(target=consume, args=(upload_jobs, done_jobs, clength, cname, keyfile_name))
     consumer.start()
     app.run(host=SERVER)
-    p.join()
+    consumer.join()
