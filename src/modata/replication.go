@@ -5,6 +5,8 @@ import (
   "web"
   "sort"
   "time"
+  "os"
+  "log"
   "io/ioutil"
 )
 
@@ -38,6 +40,10 @@ func BuildKeyMap(contacts ContactList) map[string][]string {
 
 func (rs *ReplicationServer) IntelligentReplication () {
   contacts := rs.blockServer.routingTable.AllContacts()
+  if len(contacts) < rs.blockServer.routingTable.k {
+    // Not enough nodes to replicate up to k
+    return
+  }
   contacts = append(contacts, rs.blockServer.contact)
   keyMapping := BuildKeyMap(contacts)
 
@@ -61,7 +67,7 @@ func (rs *ReplicationServer) IntelligentReplication () {
 
   max := 3
   for _, value := range replicationCounts {
-    if value >= rs.blockServer.routingTable.k - 1 {
+    if value >= rs.blockServer.routingTable.k {
       // Don't replicate fully replicated nodes
       break
     }
@@ -103,6 +109,13 @@ func StartReplicationServer(name string, bs *BlockServer) *ReplicationServer{
 
   rs.server = web.NewServer()
   rs.blockServer = bs
+
+  logFile, err := os.OpenFile(name + ".log", os.O_CREATE | os.O_APPEND, 0644)
+  if err == nil {
+    rs.server.SetLogger(log.New(logFile, "", log.Ldate | log.Ltime))
+    fmt.Printf("Set logger to %v\n", logFile)
+    defer logFile.Close()
+  }
 
   go func() {
     // Identifier for this node

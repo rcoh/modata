@@ -258,7 +258,7 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
         for k, v := range req.Form {
             ctx.Params[k] = v[0]
         }
-        fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
+        //fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
     }
     ctx.Server.Logger.Print(logEntry.String())
 

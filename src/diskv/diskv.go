@@ -467,11 +467,10 @@ func (d *Diskv) ensureCacheSpaceFor(valueSize uint64) error {
 		d.cacheSize -= uint64(len(val)) // len should return uint :|
 	}
 	if !safe() {
-		panic(fmt.Sprintf(
-			"%d bytes still won't fit in the cache! (max %d bytes)",
+		return fmt.Errorf(
+			"couldn't store %d bytes after clearing, probably concurrent access",
 			valueSize,
-			d.CacheSizeMax,
-		))
+		)
 	}
 
 	return nil

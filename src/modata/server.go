@@ -10,6 +10,8 @@ import (
   "encoding/json"
   "diskv"
   "io/ioutil"
+  "log"
+  "os"
 )
 
 type BlockServer struct {
@@ -310,6 +312,12 @@ func StartBlockServer(name string) *BlockServer{
 
   bs.data = make(map[Key]string)
   bs.server = web.NewServer()
+  logFile, err := os.OpenFile(name + ".log", os.O_CREATE | os.O_APPEND, 0644)
+  if err == nil {
+    bs.server.SetLogger(log.New(logFile, "", log.Ldate | log.Ltime))
+    fmt.Printf("Set logger to %v\n", logFile)
+    defer logFile.Close()
+  }
   bs.routingTable = NewRoutingTable(5, MakeByteSlice(id))
 
   go func() {
@@ -393,6 +401,7 @@ func StartBlockServer(name string) *BlockServer{
     fmt.Printf("Listening on %v\n", name)
     bs.server.Run(name)
   }();
+
 
   return bs
 }

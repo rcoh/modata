@@ -62,7 +62,10 @@ def erasure_chunk(data, percent_required=.5, target_size = CHUNK_SIZE):
     encodings = []
     print "Total superblocks: ", len(data) / superblock_length
     for superblock in basic_chunk(data, superblock_length):
-        encodings.append(encer.encode(superblock))
+        data = superblock
+        if isinstance(data, unicode):
+            data = data.encode('utf-8')
+        encodings.append(encer.encode(data))
     return (trial_k, trial_m, encodings)
 
 def recombine_chunks(k, m, chunks):
