@@ -87,7 +87,7 @@ def index():
 
     """ % (current_name + " - " + str(current_size) + " bytes",
            upload_jobs.qsize(),
-           "".join(["<li><a href=/download/%s>Download %s</a></li>" % (key,key) for key in keyfile.keys()]))
+           "".join(["<li><a href=/download/%s>Download %s</a></li>" % (key,key) for key in sorted(keyfile.keys())]))
     return body_str % body
 
 @app.route("/upload", methods=['POST'])
