@@ -37,7 +37,7 @@ def index():
         current_size = plength.recv()
 
     return render_template('index.html', current_upload=current_name, upload_size=current_size,
-            num_pending=upload_jobs.qsize(), keys=sorted(keyfile.keys()))
+            num_pending=0, keys=sorted(keyfile.keys()))
 
 @app.route("/upload", methods=['POST'])
 def posted():

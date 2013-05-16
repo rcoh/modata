@@ -118,14 +118,6 @@ func StartReplicationServer(name string, bs *BlockServer) *ReplicationServer{
   }
 
   go func() {
-    // Identifier for this node
-
-    rs.server.Get("/contacts", func (c *web.Context) string {
-      c.ContentType("json")
-      c.ResponseWriter.Header().Add("Access-Control-Allow-Origin", "*")
-      return RespondWithData(bs.routingTable.AllContacts())
-    })
-
     rs.server.Get("/keymap", func (c *web.Context) string {
       c.ContentType("json")
       c.ResponseWriter.Header().Add("Access-Control-Allow-Origin", "*")

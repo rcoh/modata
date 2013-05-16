@@ -6,6 +6,7 @@ import threading
 import sys
 from copy import deepcopy
 from multiprocessing import Pool
+from progressbar import *
 
 CHUNK_SIZE = 4096
 CHUNK_SIZE = 32768
@@ -29,7 +30,9 @@ def send_chunks_get_metadata(data):
         super_dicts_chunks.append(make_chunk_dicts(superb))
 
     print "Sending chunks to storage"
-    for superb_dict in super_dicts_chunks:
+    tot_blocks = len(super_dicts_chunks)
+    for i, superb_dict in enumerate(super_dicts_chunks):
+        print "Uploading %d of %d" % (i + 1, tot_blocks)
         send_chunks_to_storage(superb_dict)
         metadata.append(get_metadata(k, m, superb_dict))
 
@@ -60,7 +63,7 @@ def erasure_chunk(data, percent_required=.5, target_size = CHUNK_SIZE):
     # m must be less than 256 for the encoder
     encer = zfec.easyfec.Encoder(int(trial_k), int(trial_m))
     encodings = []
-    print "Total superblocks: ", len(data) / superblock_length
+    print "Total superblocks: ", math.ceil(len(data) / superblock_length)
     for superblock in basic_chunk(data, superblock_length):
         data = superblock
         if isinstance(data, unicode):
@@ -100,11 +103,13 @@ def send_chunks_to_storage(chunks):
         t.daemon = True
         threads.append(t)
         t.start()
-    count = len(threads)
+    count = 0
+    pbar = ProgressBar(widgets=["Uploaded: ", Percentage(), Bar() , ' ', ETA(), ' ', Timer()], maxval=len(threads)).start()
     for t in threads:
-      t.join()
-      print "{} left".format(count)
-      count -= 1
+        t.join()
+        count += 1
+        pbar.update(count)
+    pbar.finish()
 
 def get_metadata(k, m, chunk_dicts):
     meta = {}

@@ -40,7 +40,7 @@ class ServerManager(object):
                 bootstrap = ""
 
             if replication_port is None:
-                resp = envoy.run('go run ../main.go -block-server="%s:%d" %s' % (server, port, bootstrap))
+                resp = envoy.run('go run ../main.go -block-server="%s:%d" %s' % (SERVER, port, bootstrap))
             else:
                 resp = envoy.run('go run ../main.go \
                         -block-server="%s:%d" %s -replication=true \

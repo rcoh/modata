@@ -32,7 +32,7 @@ func main() {
         fmt.Println("Starting block server!")
         bs = modata.StartBlockServer(*blockName)
         // Ping the bootstrap
-        fmt.Println("Pinging the bootstrap ...")
+        fmt.Printf("Pinging the bootstrap ... %s\n", "http://" + *bootstrapName + "/ping")
         _, _, contact := modata.JsonGet("http://" + *bootstrapName + "/ping", bs.Contact())
         bs.UpdateContact(contact)
     }

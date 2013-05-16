@@ -3,3 +3,4 @@ requests==1.1.0
 envoy==0.0.2
 pylzma==0.4.4
 Flask==0.9
+progressbar==2.3

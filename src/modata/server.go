@@ -388,7 +388,7 @@ func StartBlockServer(name string) *BlockServer{
 
     // Re-replicates a key that this node has
     bs.server.Post("/replicate", func (c *web.Context) string {
-      c.ContentType("json")
+      bs.prepareResponse(c)
       key := c.Params["key"]
       value, ok := bs.fileData.Read(key)
       if ok == nil {
@@ -396,6 +396,12 @@ func StartBlockServer(name string) *BlockServer{
         return bs.IterativeStore(c)
       }
       return RespondNotFound()
+    })
+
+    bs.server.Get("/contacts", func (c *web.Context) string {
+      bs.prepareResponse(c)
+      c.ResponseWriter.Header().Add("Access-Control-Allow-Origin", "*")
+      return RespondWithData(bs.routingTable.AllContacts())
     })
 
     fmt.Printf("Listening on %v\n", name)

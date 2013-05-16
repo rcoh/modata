@@ -19,7 +19,7 @@ if __name__ == "__main__":
         print "Spun up primary"
 
         for i in range(NUMSERVERS):
-            manager.async_start_block_server(1235 + i, 1338 + i)
+            manager.async_start_block_server(1235 + i)
             ports.append(1235 + i)
 
         while 1:
