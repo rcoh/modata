@@ -5,9 +5,11 @@ import coding
 import time
 from server_config import SERVER
 import keyfilelib
-from multiprocessing import Queue, Pipe, Process
+from multiprocessing import Pipe
+from threading import Thread
+from Queue import Queue
 from werkzeug import secure_filename
-from cStringIO import StringIO
+import io
 
 
 app = Flask(__name__)
@@ -37,7 +39,7 @@ def index():
         current_size = plength.recv()
 
     return render_template('index.html', current_upload=current_name, upload_size=current_size,
-            num_pending=0, keys=sorted(keyfile.keys()))
+            num_pending=upload_jobs.qsize(), keys=sorted(keyfile.keys()))
 
 @app.route("/upload", methods=['POST'])
 def posted():
@@ -55,9 +57,9 @@ def download(filename):
     with open(keyfile_name, 'r') as keyfile_handle:
         keyfile = json.loads(keyfile_handle.read())
     metadata = keyfile[filename]
-    data = StringIO(coding.get_chunks(metadata))
-
-    return send_file(data)
+    data = coding.get_chunks(metadata)
+    print len(data)
+    return send_file(io.BytesIO(data))
 
 @app.route("/assets/css/<filename>", methods=['GET'])
 def css(filename):
@@ -90,14 +92,11 @@ def consume(input_queue, done_jobs, length_pipe, name_pipe, keyfile_name):
             time.sleep(1)
 
 
-
-
 if __name__ == "__main__":
     upload_jobs = Queue()
     done_jobs = Queue()
 
-    app.debug = True
-    consumer = Process(target=consume, args=(upload_jobs, done_jobs, clength, cname, keyfile_name))
+    consumer = Thread(target=consume, args=(upload_jobs, done_jobs, clength, cname, keyfile_name))
     consumer.start()
-    app.run(host=SERVER)
+    app.run(host=SERVER, threaded=True)
     consumer.join()

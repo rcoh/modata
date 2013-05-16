@@ -7,6 +7,7 @@ import sys
 from copy import deepcopy
 from multiprocessing import Pool
 from progressbar import *
+from Queue import Queue
 
 CHUNK_SIZE = 4096
 CHUNK_SIZE = 32768
@@ -78,15 +79,15 @@ def recombine_chunks(k, m, chunks):
     # Pick k chunks:
     used_data = []
     used_blocknums = []
-    if len(chunks) < k:
+    if len(chunks) - chunks.count(None) < k:
         print "Not enough chunks to recover data"
         return ""
     for chunk in chunks:
         if chunk['data']:
           used_data.append(chunk['data'].decode('hex'))
           used_blocknums.append(chunk['blocknum'])
-    print len(used_data)
-    print k
+    #print len(used_data)
+    #print k
 
     return ''.join(decer.decode(used_data[:k], used_blocknums[:k]))
 
@@ -104,7 +105,7 @@ def send_chunks_to_storage(chunks):
         threads.append(t)
         t.start()
     count = 0
-    pbar = ProgressBar(widgets=["Uploaded: ", Percentage(), Bar() , ' ', ETA(), ' ', Timer()], maxval=len(threads)).start()
+    pbar = ProgressBar(widgets=["Uploaded: ", Percentage(), Bar() , ' ', ETA()],maxval=len(threads)).start()
     for t in threads:
         t.join()
         count += 1
@@ -120,27 +121,50 @@ def get_metadata(k, m, chunk_dicts):
     meta['chunks'] = chunk_dicts
     return meta
 
-def get_data(digest):
+def get_data(blocknum, digest, result_queue):
     try:
-        return restlib.findvalue(digest, local=False)
+        result = restlib.findvalue(digest, local=False)
+        result_queue.put((blocknum, result))
     except Exception as e:
         print e
-        return None
+        result_queue.put((blocknum, None))
 
 def data_for_superblock(metadata):
     k = int(metadata['k'])
     m = int(metadata['m'])
     # TODO: we only need k
-    print "Looking for {} chunks".format(len(metadata['chunks']))
     required = len(metadata['chunks'])
 
-    pool = Pool(processes=4)
-    data = pool.map(get_data,
-                    [cd['digest'] for cd in metadata['chunks']])
-    index = 0
-    for chunk_dict in metadata['chunks']:
-        chunk_dict['data'] = data[index]
-        index += 1
+    #pool = Pool(processes=4)
+    #data = pool.map(get_data,
+    #                [cd['digest'] for cd in metadata['chunks']])
+    #index = 0
+    #for chunk_dict in metadata['chunks']:
+    #    chunk_dict['data'] = data[index]
+    #    index += 1
+
+    threads = []
+    result_queue = Queue()
+    for cd in metadata['chunks']:
+        t = threading.Thread(target = get_data,
+                             args = (cd['blocknum'], cd['digest'], result_queue))
+        threads.append(t)
+        t.start()
+
+    count = 0
+    blocks_done = {}
+    pbar = ProgressBar(widgets=["Downloaded: ", Percentage(), Bar() , ' ', ETA()],maxval=len(threads)).start()
+    for t in threads:
+        t.join()
+        blocknum, data = result_queue.get()
+        blocks_done[blocknum] = data
+        count += 1
+        pbar.update(count)
+    pbar.finish()
+
+    for cd in metadata['chunks']:
+        cd['data'] = blocks_done[cd['blocknum']]
+
 
     return recombine_chunks(k, m, metadata['chunks'])
 
@@ -149,9 +173,11 @@ def get_chunks(metadata):
         print "Bad metadata. Try again"
         return
 
-    print "Need {} blocks".format(len(metadata))
-    result = '' 
-    for superblock in metadata:
+    print "Downloading chunks"
+    result = ''
+    length = len(metadata)
+    for i, superblock in enumerate(metadata):
+        print "Downloading %d of %d" % (i+1, length)
         result += data_for_superblock(superblock)
 
     return result
