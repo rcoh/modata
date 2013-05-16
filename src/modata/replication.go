@@ -130,6 +130,12 @@ func StartReplicationServer(name string, bs *BlockServer) *ReplicationServer{
       return string(b)
     })
 
+    rs.server.Get("/d3.min.js", func(c *web.Context) string {
+      c.ContentType("application/javascript")
+      b, _ := ioutil.ReadFile("../viz/d3.min.js")
+      return string(b)
+    })
+
     fmt.Printf("Listening on %v\n", name)
     rs.server.Run(name)
   }();
