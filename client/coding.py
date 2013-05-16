@@ -165,7 +165,6 @@ def data_for_superblock(metadata):
     for cd in metadata['chunks']:
         cd['data'] = blocks_done[cd['blocknum']]
 
-
     return recombine_chunks(k, m, metadata['chunks'])
 
 def get_chunks(metadata):

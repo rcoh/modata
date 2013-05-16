@@ -9,7 +9,7 @@ from multiprocessing import Pipe
 from threading import Thread
 from Queue import Queue
 from werkzeug import secure_filename
-import io
+from cStringIO import StringIO
 
 
 app = Flask(__name__)
@@ -58,8 +58,12 @@ def download(filename):
         keyfile = json.loads(keyfile_handle.read())
     metadata = keyfile[filename]
     data = coding.get_chunks(metadata)
-    print len(data)
-    return send_file(io.BytesIO(data))
+    strIO = StringIO()
+    strIO.write(data)
+    strIO.seek(0)
+    return send_file(strIO,
+                     attachment_filename=filename,
+                     as_attachment=True)
 
 @app.route("/assets/css/<filename>", methods=['GET'])
 def css(filename):
@@ -96,7 +100,8 @@ if __name__ == "__main__":
     upload_jobs = Queue()
     done_jobs = Queue()
 
+    app.debug = True
     consumer = Thread(target=consume, args=(upload_jobs, done_jobs, clength, cname, keyfile_name))
     consumer.start()
-    app.run(host=SERVER, threaded=True)
+    app.run(host=SERVER)
     consumer.join()
