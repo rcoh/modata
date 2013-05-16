@@ -16,9 +16,9 @@
 	#contacts {
 		width: 140px;
 		height: 480px;
-		overflow: scroll;
-		text-align: center;
+		overflow-y: scroll;
 		position: absolute;
+		left: 15px;
 	}
 
 	#contacts ul li {
@@ -32,12 +32,12 @@
 	}
 
 	#keys {
-		text-align: center;
-		width: 350px;
+		width: 320px;
 		height: 480px;
-		overflow: scroll;
+		overflow-y: scroll;
 		position: absolute;
-		right: 10px;
+		text-align: right;
+		right: 15px;
 	}
 
 	#keys ul li {
@@ -77,9 +77,15 @@
 
 	<script>
 
+var pollInterval = 5000;
+
+var extralinks = [];
+
+var extranodes = [];
+
 var statserver = "";
 
-var cap = 2;
+var round = 0;
 
 function getContacts(f) {
 	$.getJSON(statserver + "/contacts", {}, function(data, textStatus, jqXHR) {
@@ -112,28 +118,32 @@ function getContacts(f) {
 		var done = 0;
 		var i = 0;
 		nodeList.map(function(n) {
+			// Hack, replication server addr for blockserver
 			var addr = "http://" + nodeList[i].Addr + ":" + (parseInt(nodeList[i].Port) + (1337 - 1234));
+
 			i++;
-			// Replication server port for blockserver
 
 			$.getJSON(addr + "/contacts", {}, function(data, textStatus, jqXHR) {
 				var contacts = data.data;
 				contacts.map(function(e) {
-					var i = findNode(n);
-					var j = findNode(e);
-					connections.push({source: i, target: j});
+					var s = findNode(n);
+					var t = findNode(e);
+					connections.push({source: s, target: t});
 				});
 
-				if (++done == l || done == cap) {
-					cap++;
-					done = l+1
+				if (++done == l) {
+					connections.push.apply(connections, extralinks);
+					nodeList.push.apply(nodeList, extranodes);
+
+					if (round++ > 2) {
+						nodeList.splice(0, 1);
+					}
+
 					f(nodeList, connections);
 					return
 				}
 			}).fail(function(data, textStatus, jqXHR) {
-				if (++done == l || done == cap) {
-					cap++
-					done = l+1
+				if (++done == l) {
 					f(nodeList, connections);
 					return
 				}
@@ -177,25 +187,60 @@ function plotContacts(nodes, links) {
 	  .nodes(nodes)
 	  .links(links)
 
+	// Make legend
+	var nodeTable = d3.select("#contacts").append("ul");
+
 	function updateContacts(newnodes, newlinks) {
 
 		var nodes = force.nodes();
 		var links = force.links();
 
-		newnodes.map(function(nn) {
-			if (! $.grep(nodes, function(n) { return nn.Addr == n.Addr && nn.Port == n.Port})) {
-				nodes.push(nn);
-			}
-		});
+		// Manually synchronize node / link lists with new contents
+		// Ugh.
 
-		newlinks.map(function(nl) {
-			if (! $.grep(links, function(l) { return l.source == nl.source && l.target == nl.target})) {
-				links.push(nl);
+		for (var i = 0; i < nodes.length; i++) {
+			var n = nodes[i];
+			if (newnodes.filter(function(nn) { return nn.Addr == n.Addr && nn.Port == n.Port}).length == 0) {
+				nodes.splice(i--, 1);
 			}
-		});
+		}
+
+		for (var i = 0; i < links.length; i++) {
+			var l = links[i];
+			if (newlinks.filter(function(nl) {
+				if (typeof(l.source) == "number") {
+					return l.source == nl.source && l.target == nl.target;
+				}
+				return l.source.index == nl.source && l.target.index == nl.target;
+				}).length == 0) {
+				
+				links.splice(i--, 1);
+			}
+		}
+
+		for (var i = 0; i < newnodes.length; i++) {
+			var nn = newnodes[i];
+			if (nodes.filter(function(n) { return nn.Addr == n.Addr && nn.Port == n.Port}).length == 0) {
+				nodes.splice(i++, 0, nn);
+			}
+		}
+
+		for (var i = 0; i < newlinks.length; i++) {
+			var nl = newlinks[i];
+			if (links.filter(function(l) { 
+				if (typeof(l.source) == "number") {
+					return l.source == nl.source && l.target == nl.target;
+				}
+				return l.source.index == nl.source && l.target.index == nl.target;
+				}).length == 0) {
+				links.splice(i++, 0, nl);
+			}
+		}
+
+		console.log(nodes.length + " / " + links.length);
 
 		var link = svg.selectAll(".link")
-		  .data(force.links());
+		  .data(links);
 
 		link.enter().append("line")
 		  .attr("class", "link")
@@ -204,12 +249,11 @@ function plotContacts(nodes, links) {
 		link.exit().remove();
 
 		var node = svg.selectAll(".node")
-		  .data(force.nodes());
+		  .data(nodes, function (n) { return n.Addr + ":" + n.Port; });
 
 		node.enter().append("circle")
 		  .attr("class", "node")
 		  .attr("r", 8)
-		  .attr("data-label", function(d) { return d.Port })
 	  	  .style("fill", function(d) { return color(d.Addr + ":" + d.Port); })
 		  .call(force.drag);
 
@@ -229,31 +273,37 @@ function plotContacts(nodes, links) {
 		});
 
 		force.start();
+
+		// Update legend
+		var nodeLis = nodeTable.selectAll(".nodeLegend")
+						.data(newnodes);
+		
+		nodeLis.enter().append("li")
+		  .text(function(n) { return n.Addr + ":" + n.Port; })
+		  .style("color", function(n) { return color(n.Addr + ":" + n.Port); })
+		  .attr("class", "nodeLegend")
+
+		  .on("mouseenter", function(n) {
+		  	svg.selectAll(".node").filter(function(no) { return (no.Addr == n.Addr && n.Port == no.Port) })
+		  	  .style("stroke", "black")
+		  	  .style("stroke-width", "2px")
+		  })
+
+		  .on("mouseleave", function(n) {
+		  	svg.selectAll(".node").style("stroke-width", "0")
+		  });
+
+		nodeLis.exit().remove();
 	}
 
 	updateContacts(nodes, links);
 
+	extralinks = [{source:0, target:2}]
+	extranodes = [{Addr:"foobar", Port:1244}]
+
 	setInterval(function() {
 		getContacts(updateContacts);
-	}, 1000);
-
-	// Make legend
-	var nodeTable = d3.select("#contacts").append("ul");
-	var nodeLis = nodeTable.selectAll(".nodeLegend")
-	  .data(nodes)
-	  .enter().append("li")
-	    .text(function(n) { return n.Addr + ":" + n.Port; })
-	    .style("color", function(n) { return color(n.Addr + ":" + n.Port); })
-
-	    .on("mouseenter", function(n) {
-	    	svg.selectAll(".node").filter(function(no) { return (no.Addr == n.Addr && n.Port == no.Port) })
-	    	  .style("stroke", "black")
-	    	  .style("stroke-width", "2px")
-	    })
-
-	    .on("mouseleave", function(n) {
-	    	svg.selectAll(".node").style("stroke-width", "0")
-	    })
+	}, pollInterval);
 
 	// Do shit with keys
 	var keyTable = d3.select("#keys").append("ul");
@@ -263,7 +313,6 @@ function plotContacts(nodes, links) {
 		  .data(data);
 
 		keyLis.enter().append("li")
-		    .text(function(k) { return k.key + " (" + k.replicationCount + ")" })
 		    .style("color", "black")
 		    .on("mouseenter", function(k) {
 		    	svg.selectAll(".node").filter(function(n) { 
@@ -294,6 +343,8 @@ function plotContacts(nodes, links) {
 		    	  .style("stroke-width", "0")
 		    });
 
+		keyLis.text(function(k) { return k.key + " (" + k.replicationCount + ")" })
+
 		keyLis.exit().remove();
 	}
 
@@ -304,7 +355,7 @@ function plotContacts(nodes, links) {
 	    	getKeys(function(keys) {
 	    		updateKeys(keys);
 	    	});
-	    }, 1000);
+	    }, pollInterval);
 	});
 }
 
