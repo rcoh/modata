@@ -40,6 +40,13 @@
 		right: 15px;
 	}
 
+	#keys div:before {
+		content: attr(data-filename);
+		display: block;
+		font-weight: bold;
+		text-align: left;
+	}
+
 	#keys ul li {
 		list-style-type: none;
 		line-height: 1.5em;
@@ -73,22 +80,25 @@
 
 	</style>
 
-	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+	<script src="/d3.min.js" charset="utf-8"></script>
 
 	<script>
 
 var pollInterval = 5000;
 
-var extralinks = [];
+var rootAddr = "localhost";
+var rootPort = 1234;
+var blockserver = "http://"+rootAddr+":"+rootPort;
+var repserver = "http://"+rootAddr+":"+(rootPort+1337-1234);
+var rootNode = {Addr: rootAddr, Port:rootPort}
 
-var extranodes = [];
-
-var statserver = "";
+// Optionally filled in by file upload
+var keyfile;
 
 var round = 0;
 
 function getContacts(f) {
-	$.getJSON(statserver + "/contacts", {}, function(data, textStatus, jqXHR) {
+	$.getJSON(blockserver + "/contacts", {}, function(data, textStatus, jqXHR) {
 		
 		data.data.sort(function(na, nb) {
 			if (na.Addr < nb.Addr) {
@@ -101,6 +111,8 @@ function getContacts(f) {
 		});
 
 		var nodeList = data.data;
+		// Prepend root node
+		nodeList.splice(0, 0, rootNode);
 		var connections = [];
 
 		function findNode(n) {
@@ -118,8 +130,17 @@ function getContacts(f) {
 		var done = 0;
 		var i = 0;
 		nodeList.map(function(n) {
+			if (i == 0) {
+				// Don't double-process root node
+				i++; done++;
+				return;
+			}
+
 			// Hack, replication server addr for blockserver
-			var addr = "http://" + nodeList[i].Addr + ":" + (parseInt(nodeList[i].Port) + (1337 - 1234));
+			var addr = "http://" + nodeList[i].Addr + ":" + nodeList[i].Port;
+
+			// Connection from root noot
+			connections.push({source: 0, target:i});
 
 			i++;
 
@@ -132,13 +153,6 @@ function getContacts(f) {
 				});
 
 				if (++done == l) {
-					connections.push.apply(connections, extralinks);
-					nodeList.push.apply(nodeList, extranodes);
-
-					if (round++ > 2) {
-						nodeList.splice(0, 1);
-					}
-
 					f(nodeList, connections);
 					return
 				}
@@ -153,19 +167,43 @@ function getContacts(f) {
 }
 
 function getKeys(f) {
-	$.getJSON(statserver + "/keymap", {}, function(data, textStatus, jqXHR) {
-		keys = Object.keys(data.data.keys).map(function(k) { return {key: k, nodes: data.data.keys[k].nodes, replicationCount: data.data.keys[k].replicationCount }});
+	$.getJSON(repserver + "/keymap", {}, function(data, textStatus, jqXHR) {
+
+		var keymap;
+
+		if (keyfile != null) {
+			keymap = Object.keys(keyfile).map(function(n) {
+				return {name: n,
+						keys: keyfile[n][0].chunks.map(function(chunk) {
+							try {
+							return {key: chunk.digest,
+									nodes: data.data.keys[chunk.digest].nodes,
+									replicationCount: data.data.keys[chunk.digest].replicationCount
+							}
+							} catch (err) {}
+						})
+						};
+			});
+			console.log(keymap)
+		} else {
+			keys = Object.keys(data.data.keys).map(function(k) { return {key: k, nodes: data.data.keys[k].nodes, replicationCount: data.data.keys[k].replicationCount }});
+			keymap = [{name: "", keys: keys}]
+		}
+
 
 		// Also update stats
 		var nc = data.data.stats.contacts;
 		var nk = data.data.stats.numKeys;
 		$("#footer").html(nk + " keys, " + nc + " contacts <span style='float: right'>6.824 Spring 2013 &mdash; Merritt Boyd, Russell Cohen, Joseph Lynch")
 
-		f(keys);
+		f(keymap);
 	}).fail(function(data, status, xhr) {
 		console.log("fail: " + data + ":" + status);
 	});
 }
+
+// Binding for the inner closure, so we can invoke it outside later
+var updateKeys;
 
 function plotContacts(nodes, links) {
 	// Adapted from D3 example code: http://bl.ocks.org/mbostock/4062045
@@ -237,8 +275,6 @@ function plotContacts(nodes, links) {
 			}
 		}
 
-		console.log(nodes.length + " / " + links.length);
-
 		var link = svg.selectAll(".link")
 		  .data(links);
 
@@ -276,7 +312,7 @@ function plotContacts(nodes, links) {
 
 		// Update legend
 		var nodeLis = nodeTable.selectAll(".nodeLegend")
-						.data(newnodes);
+						.data(nodes, function(n) { return n.Addr + ":" + n.Port });
 		
 		nodeLis.enter().append("li")
 		  .text(function(n) { return n.Addr + ":" + n.Port; })
@@ -298,9 +334,6 @@ function plotContacts(nodes, links) {
 
 	updateContacts(nodes, links);
 
-	extralinks = [{source:0, target:2}]
-	extranodes = [{Addr:"foobar", Port:1244}]
-
 	setInterval(function() {
 		getContacts(updateContacts);
 	}, pollInterval);
@@ -308,9 +341,18 @@ function plotContacts(nodes, links) {
 	// Do shit with keys
 	var keyTable = d3.select("#keys").append("ul");
 
-	function updateKeys(data) {
-		var keyLis = keyTable.selectAll("li")
-		  .data(data);
+	updateKeys = function(data) {
+		console.log(data);
+
+		var files = keyTable.selectAll("div").data(data);
+		var fe = files.enter().append("div");
+			
+		files.attr("data-filename", function(f) { return f.name; });
+
+		files.exit().remove();
+
+		var keyLis = fe.selectAll("li")
+		  .data(function(f) { return f.keys; });
 
 		keyLis.enter().append("li")
 		    .style("color", "black")
@@ -359,7 +401,36 @@ function plotContacts(nodes, links) {
 	});
 }
 
+function handleDragOver(e) {
+	e.stopPropagation();
+	e.preventDefault();
+	e.dataTransfer.dropEffect = "copy";
+}
+
+function handleDrop(e) {
+	e.stopPropagation();
+	e.preventDefault();
+
+	var files = e.dataTransfer.files;
+
+	if (files.length > 0) {
+		var f = files[0];
+		var reader = new FileReader();
+		reader.onload = function(e) {
+			keyfile = JSON.parse(e.target.result);
+			console.log(keyfile);
+
+			d3.select("keys").selectAll("").remove();
+			getKeys(updateKeys);
+		}
+		reader.readAsText(f);
+	}
+}
+
 window.onload = function() {
+	var keylist = document.getElementById("keys");
+	keylist.addEventListener('dragover', handleDragOver, false);
+	keylist.addEventListener('drop', handleDrop, false);
 	getContacts(plotContacts);
 }
 
