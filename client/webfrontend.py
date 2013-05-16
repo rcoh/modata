@@ -1,5 +1,5 @@
 from flask import Flask
-from flask import request, send_file, render_template
+from flask import request, send_file, render_template, send_from_directory
 import json
 import coding
 import time
@@ -48,7 +48,6 @@ def posted():
             data = ufile.read()
 
     upload_jobs.put((filename, data))
-    #metadata = coding.send_chunks_get_metadata(data)
     return render_template("queued.html")
 
 @app.route("/download/<filename>", methods=['GET'])
@@ -59,6 +58,10 @@ def download(filename):
     data = StringIO(coding.get_chunks(metadata))
 
     return send_file(data)
+
+@app.route("/css/<filename>", methods=['GET'])
+def css(filename):
+    return send_from_directory(app.static_folder + "/css", filename)
 
 
 def consume(input_queue, done_jobs, length_pipe, name_pipe, keyfile_name):
