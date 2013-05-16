@@ -44,6 +44,7 @@
 		content: attr(data-filename);
 		display: block;
 		font-weight: bold;
+		font-size: 12pt;
 		text-align: left;
 	}
 
@@ -86,7 +87,7 @@
 
 var pollInterval = 5000;
 
-var rootAddr = "localhost";
+var rootAddr = window.location.hostname;
 var rootPort = 1234;
 var blockserver = "http://"+rootAddr+":"+rootPort;
 var repserver = "http://"+rootAddr+":"+(rootPort+1337-1234);
@@ -214,7 +215,7 @@ function plotContacts(nodes, links) {
 
 	var force = d3.layout.force()
 	    .charge(-120)
-	    .linkDistance(120)
+	    .linkDistance(150)
 	    .size([width, height]);
 
 	var svg = d3.select("#viz").append("svg")
