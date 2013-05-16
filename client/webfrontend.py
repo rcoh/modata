@@ -59,10 +59,17 @@ def download(filename):
 
     return send_file(data)
 
-@app.route("/css/<filename>", methods=['GET'])
+@app.route("/assets/css/<filename>", methods=['GET'])
 def css(filename):
     return send_from_directory(app.static_folder + "/css", filename)
 
+@app.route("/assets/js/<filename>", methods=['GET'])
+def js(filename):
+    return send_from_directory(app.static_folder + "/js", filename)
+
+@app.route("/demo")
+def demo():
+    return render_template("index2.html")
 
 def consume(input_queue, done_jobs, length_pipe, name_pipe, keyfile_name):
     while True:
