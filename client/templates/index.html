@@ -1,0 +1,20 @@
+<html>
+<body>
+    <h3> MoData </h3>
+    <div> Uploads
+    <p><a href="/fp">Upload</a></p>
+    <div> Waiting Uploads </div>
+    <p> Current upload: {{ current_upload }} - {{ upload_size }} bytes</p>
+    <p> {{ num_pending }} pending </p>
+    </div>
+    <div> Downloads 
+        <ul>
+        {% for key in keys %}
+        <li>
+            <a href=/download/{{ key }}>Download {{ key }}</a>
+        </li>
+        {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>
